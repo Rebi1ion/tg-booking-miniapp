@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Loader2, Shield, CreditCard } from 'lucide-react';
+import { Loader2, CreditCard } from 'lucide-react';
 import { shopConfig } from '@/config/shopConfig';
 
 const API_URL = shopConfig.apiUrl;
@@ -98,25 +98,6 @@ export const SettingsPanel = () => {
                             onCheckedChange={(checked) => updateSetting('require_prepayment', checked)}
                             disabled={saving}
                         />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5" />
-                        Защита от спама
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-sm text-muted-foreground space-y-2">
-                        <p>• Максимум <strong>{shopConfig.security?.maxPendingBookingsPerUser || 3}</strong> неоплаченных записей на клиента</p>
-                        <p>• Авто-отмена неоплаченных через <strong>{shopConfig.security?.autoCancelUnpaidMinutes || 30}</strong> минут</p>
-                        <p>• Rate limiting: <strong>60</strong> запросов в минуту</p>
-                        <p className="text-xs mt-4 opacity-70">
-                            Эти настройки изменяются в server/.env
-                        </p>
                     </div>
                 </CardContent>
             </Card>
