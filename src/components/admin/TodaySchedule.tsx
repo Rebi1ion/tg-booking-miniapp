@@ -160,6 +160,9 @@ export const TodaySchedule = () => {
                                 <div className="flex items-center gap-1 text-sm mt-2 opacity-80">
                                     <User className="h-3 w-3" />
                                     <span>Клиент: {getClientName(booking)}</span>
+                                    {booking.user?.telegram_id && (
+                                        <span className="text-xs text-muted-foreground ml-1">(ID: {booking.user.telegram_id.toString()})</span>
+                                    )}
                                 </div>
                             </div>
 

@@ -7,6 +7,7 @@ import { AdminDashboard } from './components/admin/AdminDashboard'
 import { MasterDashboard } from './components/master/MasterDashboard'
 import { useAppStore } from './store/useAppStore'
 import { Loader2, Calendar, User, Settings } from 'lucide-react'
+import { ToastProvider } from './components/ui/toast'
 
 // Helper function to determine if a hex color is dark
 const isColorDark = (hexColor: string): boolean => {
@@ -259,72 +260,74 @@ function App() {
     }
 
     return (
-        <div className="min-h-screen antialiased font-sans bg-background">
-            {viewMode === 'admin' ? (
-                <AdminDashboard />
-            ) : viewMode === 'master' && masterInfo ? (
-                <MasterDashboard masterId={masterInfo.id} masterName={masterInfo.name} />
-            ) : (
-                <div className="relative pb-24">
-                    {/* Birthday Button - shows if user hasn't set birthday */}
-                    {user && !userBirthday && clientTab === 'booking' && !showBirthdayForm && (
-                        <div className="p-4 container max-w-md mx-auto">
-                            <button
-                                onClick={() => setShowBirthdayForm(true)}
-                                className="w-full p-3 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors flex items-center justify-center gap-2 text-primary"
-                            >
-                                <span className="text-xl">🎂</span>
-                                <span className="font-medium">Укажите дату рождения и получите подарок!</span>
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Birthday Form - shows when button clicked */}
-                    {user && !userBirthday && clientTab === 'booking' && showBirthdayForm && (
-                        <div className="p-4 container max-w-md mx-auto mb-4">
-                            <BirthdayForm
-                                userId={user.id}
-                                onBirthdaySet={(birthday) => {
-                                    setUserBirthday(birthday);
-                                    setShowBirthdayForm(false);
-                                }}
-                            />
-                        </div>
-                    )}
-
-                    {clientTab === 'booking' ? <BookingWizard /> : <div className="p-4 container max-w-md mx-auto"><MyBookings /></div>}
-
-                    {/* Bottom Navigation for Clients */}
-                    <div className="fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around z-40 px-6">
-                        <button
-                            onClick={() => setClientTab('booking')}
-                            className={`flex flex-col items-center gap-1 transition-colors ${clientTab === 'booking' ? 'text-primary' : 'text-muted-foreground'}`}
-                        >
-                            <Calendar className="h-5 w-5" />
-                            <span className="text-[10px] font-bold uppercase">Запись</span>
-                        </button>
-
-                        <button
-                            onClick={() => setClientTab('my-bookings')}
-                            className={`flex flex-col items-center gap-1 transition-colors ${clientTab === 'my-bookings' ? 'text-primary' : 'text-muted-foreground'}`}
-                        >
-                            <User className="h-5 w-5" />
-                            <span className="text-[10px] font-bold uppercase">Мои записи</span>
-                        </button>
-
-                        {isAdmin && (
-                            <button
-                                onClick={() => setViewMode('admin')}
-                                className="flex flex-col items-center gap-1 text-red-500"
-                            >
-                                <Settings className="h-5 w-5" />
-                                <span className="text-[10px] font-bold uppercase">Админ</span>
-                            </button>
+        <ToastProvider>
+            <div className="min-h-screen antialiased font-sans bg-background">
+                {viewMode === 'admin' ? (
+                    <AdminDashboard />
+                ) : viewMode === 'master' && masterInfo ? (
+                    <MasterDashboard masterId={masterInfo.id} masterName={masterInfo.name} />
+                ) : (
+                    <div className="relative pb-24">
+                        {/* Birthday Button - shows if user hasn't set birthday */}
+                        {user && !userBirthday && clientTab === 'booking' && !showBirthdayForm && (
+                            <div className="p-4 container max-w-md mx-auto">
+                                <button
+                                    onClick={() => setShowBirthdayForm(true)}
+                                    className="w-full p-3 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors flex items-center justify-center gap-2 text-primary"
+                                >
+                                    <span className="text-xl">🎂</span>
+                                    <span className="font-medium">Укажите дату рождения и получите подарок!</span>
+                                </button>
+                            </div>
                         )}
+
+                        {/* Birthday Form - shows when button clicked */}
+                        {user && !userBirthday && clientTab === 'booking' && showBirthdayForm && (
+                            <div className="p-4 container max-w-md mx-auto mb-4">
+                                <BirthdayForm
+                                    userId={user.id}
+                                    onBirthdaySet={(birthday) => {
+                                        setUserBirthday(birthday);
+                                        setShowBirthdayForm(false);
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {clientTab === 'booking' ? <BookingWizard /> : <div className="p-4 container max-w-md mx-auto"><MyBookings /></div>}
+
+                        {/* Bottom Navigation for Clients */}
+                        <div className="fixed bottom-0 left-0 right-0 h-16 bg-card border-t border-border flex items-center justify-around z-40 px-6">
+                            <button
+                                onClick={() => setClientTab('booking')}
+                                className={`flex flex-col items-center gap-1 transition-colors ${clientTab === 'booking' ? 'text-primary' : 'text-muted-foreground'}`}
+                            >
+                                <Calendar className="h-5 w-5" />
+                                <span className="text-[10px] font-bold uppercase">Запись</span>
+                            </button>
+
+                            <button
+                                onClick={() => setClientTab('my-bookings')}
+                                className={`flex flex-col items-center gap-1 transition-colors ${clientTab === 'my-bookings' ? 'text-primary' : 'text-muted-foreground'}`}
+                            >
+                                <User className="h-5 w-5" />
+                                <span className="text-[10px] font-bold uppercase">Мои записи</span>
+                            </button>
+
+                            {isAdmin && (
+                                <button
+                                    onClick={() => setViewMode('admin')}
+                                    className="flex flex-col items-center gap-1 text-red-500"
+                                >
+                                    <Settings className="h-5 w-5" />
+                                    <span className="text-[10px] font-bold uppercase">Админ</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+        </ToastProvider>
     )
 }
 

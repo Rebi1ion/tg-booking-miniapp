@@ -192,6 +192,9 @@ export const AllBookings = () => {
                                 <div className="flex items-center gap-1 text-muted-foreground text-xs">
                                     <User className="h-3 w-3" />
                                     <span>Клиент: {getClientName(booking)}</span>
+                                    {booking.user?.telegram_id && (
+                                        <span className="ml-1">(ID: {booking.user.telegram_id.toString()})</span>
+                                    )}
                                 </div>
 
                                 {/* Мастер */}

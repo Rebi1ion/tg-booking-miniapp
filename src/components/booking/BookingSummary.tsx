@@ -8,6 +8,7 @@ import { shopConfig } from '@/config/shopConfig';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { Loader2, Tag, CheckCircle2, XCircle } from 'lucide-react';
+import { showToast } from '@/components/ui/toast';
 
 interface PromoValidation {
     valid: boolean;
@@ -104,15 +105,15 @@ export const BookingSummary = () => {
         if (result.success) {
             if (result.invoiceSent) {
                 // Prepayment flow - invoice sent, booking will be created after payment
-                alert("💳 Инвойс на оплату отправлен в Telegram! Запись будет создана автоматически после оплаты.");
+                showToast("Инвойс на оплату отправлен в Telegram! Запись будет создана автоматически после оплаты.", 'payment');
             } else if (shopConfig.payment.enabled) {
-                alert("✅ Запись создана! Счёт на оплату отправлен вам в чат бота.");
+                showToast("Запись создана! Счёт на оплату отправлен вам в чат бота.", 'payment');
             } else {
-                alert("✅ Запись подтверждена!");
+                showToast("Запись подтверждена!", 'success');
             }
             resetBooking();
         } else {
-            alert(result.error || "Не удалось создать запись.");
+            showToast(result.error || "Не удалось создать запись.", 'error');
         }
     };
 

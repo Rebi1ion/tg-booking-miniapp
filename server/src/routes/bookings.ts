@@ -35,6 +35,9 @@ router.get('/', async (req, res) => {
             };
         }
 
+        // Exclude pending_prepayment bookings - they only appear after payment
+        where.status = { not: 'pending_prepayment' };
+
         const bookings = await prisma.booking.findMany({
             where,
             include: {
@@ -80,9 +83,22 @@ router.post('/', async (req, res) => {
     const { user_id, service_id, master_id, start_time, end_time, status, payment_id, client_name, client_phone, send_invoice, custom_price, promo_id } = req.body;
 
     try {
-        // Check if prepayment is required (only for client bookings, not admin)
+        // Check if user is banned (only for client bookings)
         if (user_id) {
             const settings = await prisma.settings.findUnique({ where: { id: 'main' } });
+            const user = await prisma.user.findUnique({ where: { id: user_id } });
+
+            if (settings?.banned_users && user) {
+                const bannedUsers: string[] = JSON.parse(settings.banned_users);
+                if (bannedUsers.includes(user.telegram_id.toString())) {
+                    return res.status(403).json({
+                        error: 'Ваш аккаунт заблокирован. Обратитесь к администратору.',
+                        code: 'USER_BANNED'
+                    });
+                }
+            }
+
+            // Check if prepayment is required
             if (settings?.require_prepayment) {
                 // Get user telegram_id and service/master info for invoice
                 const user = await prisma.user.findUnique({ where: { id: user_id } });
