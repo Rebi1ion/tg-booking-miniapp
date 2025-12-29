@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import prisma from '../utils/prisma';
 import ExcelJS from 'exceljs';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = Router();
+const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
 
 // GET /api/reports/bookings - Generate Excel report for date range
 router.get('/bookings', async (req, res) => {
@@ -91,8 +95,8 @@ router.get('/bookings', async (req, res) => {
 
             const row = sheet.addRow({
                 num: index + 1,
-                date: startTime.toLocaleDateString('ru-RU'),
-                time: `${startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`,
+                date: startTime.toLocaleDateString('ru-RU', { timeZone: TIMEZONE }),
+                time: `${startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE })} - ${endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE })}`,
                 service: booking.service?.name || 'Не указана',
                 master: booking.master?.name || 'Не указан',
                 client: clientName,
@@ -146,8 +150,8 @@ router.get('/bookings', async (req, res) => {
         });
 
         // Generate filename
-        const startStr = start.toLocaleDateString('ru-RU').replace(/\./g, '-');
-        const endStr = end.toLocaleDateString('ru-RU').replace(/\./g, '-');
+        const startStr = start.toLocaleDateString('ru-RU', { timeZone: TIMEZONE }).replace(/\./g, '-');
+        const endStr = end.toLocaleDateString('ru-RU', { timeZone: TIMEZONE }).replace(/\./g, '-');
         const filename = `bookings_${startStr}_${endStr}.xlsx`;
 
         // Set response headers

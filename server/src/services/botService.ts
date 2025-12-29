@@ -10,6 +10,7 @@ dotenv.config();
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const MINIAPP_URL = process.env.MINIAPP_URL || 'https://your-app.com';
 const ADMIN_IDS = (process.env.ADMIN_IDS || '').split(',').map(id => id.trim()).filter(id => id);
+const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
 
 if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
     console.warn('Telegram Bot: No valid BOT_TOKEN provided, bot will not start');
@@ -170,8 +171,8 @@ if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
 
             let text = '📋 <b>Ваши предстоящие записи:</b>\n\n';
             for (const b of bookings) {
-                const date = b.start_time.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-                const time = b.start_time.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                const date = b.start_time.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: TIMEZONE });
+                const time = b.start_time.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: TIMEZONE });
                 const status = b.status === 'paid' ? '✅' : b.status === 'cancelled' ? '❌' : '⏳';
                 text += `${status} <b>${date}</b> в ${time}\n   ⭐ ${b.service?.name}\n   👤 ${b.master?.name}\n\n`;
             }

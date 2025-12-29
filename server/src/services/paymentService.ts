@@ -7,6 +7,7 @@ dotenv.config();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const PAYMENT_PROVIDER_TOKEN = process.env.PAYMENT_PROVIDER_TOKEN;
+const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
 
 interface PaymentData {
     bookingId: string;
@@ -81,11 +82,13 @@ export const createBookingInvoice = async (bookingId: string, customPrice?: numb
         const date = booking.start_time.toLocaleDateString('ru-RU', {
             day: 'numeric',
             month: 'long',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: TIMEZONE
         });
         const time = booking.start_time.toLocaleTimeString('ru-RU', {
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            timeZone: TIMEZONE
         });
 
         // Use customPrice if provided, otherwise use service price
@@ -173,11 +176,13 @@ export const initPaymentHandlers = (bot: Telegraf) => {
 
             const date = booking.start_time.toLocaleDateString('ru-RU', {
                 day: 'numeric',
-                month: 'long'
+                month: 'long',
+                timeZone: TIMEZONE
             });
             const time = booking.start_time.toLocaleTimeString('ru-RU', {
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                timeZone: TIMEZONE
             });
 
             // Send confirmation to user

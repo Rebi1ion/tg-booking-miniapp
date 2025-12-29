@@ -11,6 +11,7 @@ export interface ShopConfig {
   businessType: 'barbershop' | 'beauty_salon' | 'spa' | 'nail_studio' | 'other';
   description: string;
   currency: string;
+  timezone: string; // IANA timezone, e.g. "Europe/Moscow"
 
   // Admin access (Telegram User IDs)
   // Get your ID from @userinfobot in Telegram
@@ -61,6 +62,7 @@ export const shopConfig: ShopConfig = {
   businessType: "beauty_salon",
   description: "Премиальные услуги красоты и релаксации",
   currency: "RUB",
+  timezone: "Europe/Moscow", // Change for your region
 
   // ----- ADMINS -----
   // Replace with your Telegram User IDs
