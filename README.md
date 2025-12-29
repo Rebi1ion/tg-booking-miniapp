@@ -285,6 +285,35 @@ tg-miniapp/
 
 ---
 
+## 🛡️ Защита от спама и DDoS
+
+### Встроенные механизмы защиты:
+
+| Защита | Описание | Настройка |
+|--------|----------|-----------|
+| **Лимит записей** | Макс. pending записей на пользователя | `MAX_PENDING_BOOKINGS_PER_USER` |
+| **Авто-отмена** | Отмена неоплаченных через N минут | `AUTO_CANCEL_UNPAID_MINUTES` |
+| **Rate Limiting API** | Лимит запросов/мин на IP | `RATE_LIMIT_REQUESTS_PER_MINUTE` |
+| **Обязательная оплата** | Нельзя забронировать без оплаты | `requirePrepayment: true` |
+
+### Настройка в `server/.env`:
+
+```env
+MAX_PENDING_BOOKINGS_PER_USER=3
+AUTO_CANCEL_UNPAID_MINUTES=30
+RATE_LIMIT_REQUESTS_PER_MINUTE=60
+```
+
+### Nginx Rate Limiting (опционально):
+
+Добавьте в `/etc/nginx/nginx.conf` внутри `http {}`:
+```nginx
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+```
+
+---
+
 ## 🚀 Чеклист для нового бизнеса
 
 - [ ] Создать Telegram бота через [@BotFather](https://t.me/BotFather)
@@ -301,3 +330,4 @@ tg-miniapp/
 ---
 
 👨‍💻 **Разработано для бизнеса в сфере красоты**
+

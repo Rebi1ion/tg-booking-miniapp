@@ -6,6 +6,7 @@
 
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import servicesRoutes from './routes/services';
 import mastersRoutes from './routes/masters';
@@ -18,12 +19,23 @@ import settingsRoutes from './routes/settings';
 import branchesRoutes from './routes/branches';
 import './services/reminderService'; // Root import for cron job
 import './services/botService'; // Telegram bot
+import './services/bookingCleanupService'; // Auto-cancel unpaid bookings
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Rate limiting - protect from DDoS
+const limiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '60'), // limit per IP
+    message: { error: 'Too many requests, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use(limiter);
 app.use(cors({
     origin: '*',
     allowedHeaders: ['Content-Type', 'ngrok-skip-browser-warning']

@@ -50,6 +50,12 @@ export interface ShopConfig {
     endHour: number;        // e.g. 21 for 21:00
     intervalMinutes: number; // Time slot interval, e.g. 30
   };
+
+  // Security settings
+  security: {
+    maxPendingBookingsPerUser: number; // Max unpaid bookings per user (0 = unlimited)
+    autoCancelUnpaidMinutes: number;   // Auto-cancel unpaid after N minutes (0 = disabled)
+  };
 }
 
 // ============================================================================
@@ -99,5 +105,11 @@ export const shopConfig: ShopConfig = {
     startHour: 10,
     endHour: 20,
     intervalMinutes: 30,
+  },
+
+  // ----- SECURITY -----
+  security: {
+    maxPendingBookingsPerUser: 3,  // Max 3 unpaid bookings per user
+    autoCancelUnpaidMinutes: 30,   // Cancel unpaid bookings after 30 min
   },
 };

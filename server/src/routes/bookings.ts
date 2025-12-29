@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import prisma from '../utils/prisma';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = Router();
+const MAX_PENDING_BOOKINGS = parseInt(process.env.MAX_PENDING_BOOKINGS_PER_USER || '3');
 
 // GET /api/bookings
 router.get('/', async (req, res) => {
@@ -75,6 +79,23 @@ router.post('/', async (req, res) => {
     const { user_id, service_id, master_id, start_time, end_time, status, payment_id, client_name, client_phone, send_invoice, custom_price, promo_id } = req.body;
 
     try {
+        // Check pending bookings limit (only for registered users, not admin bookings)
+        if (user_id && MAX_PENDING_BOOKINGS > 0) {
+            const pendingCount = await prisma.booking.count({
+                where: {
+                    user_id: user_id,
+                    status: 'pending'
+                }
+            });
+
+            if (pendingCount >= MAX_PENDING_BOOKINGS) {
+                return res.status(429).json({
+                    error: `Превышен лимит неоплаченных записей (${MAX_PENDING_BOOKINGS}). Оплатите или отмените существующие записи.`,
+                    code: 'PENDING_LIMIT_EXCEEDED'
+                });
+            }
+        }
+
         const booking = await prisma.booking.create({
             data: {
                 user_id,

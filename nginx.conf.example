@@ -12,6 +12,11 @@
 #
 # ============================================================================
 
+# Rate limiting zones (DDoS protection)
+# NOTE: Add these lines to the http {} block in /etc/nginx/nginx.conf, not here
+# limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+# limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
 # Frontend (React/Vite build)
 server {
     listen 80;
@@ -47,6 +52,11 @@ server {
     listen [::]:80;
     server_name api.YOUR_DOMAIN;  # e.g., api.miniapp.example.com
 
+    # Rate limiting (requires zones defined in nginx.conf http {} block)
+    # Uncomment after adding limit_req_zone and limit_conn_zone to nginx.conf
+    # limit_req zone=api_limit burst=20 nodelay;
+    # limit_conn conn_limit 10;
+
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -67,7 +77,7 @@ server {
         proxy_read_timeout 60s;
     }
 
-    # Health check endpoint
+    # Health check endpoint (no rate limiting)
     location /health {
         proxy_pass http://127.0.0.1:3000/health;
     }

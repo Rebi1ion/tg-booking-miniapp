@@ -308,7 +308,10 @@ export const useAppStore = create<AppState>((set, get) => ({
                 })
             });
 
-            if (!response.ok) throw new Error('Failed to create booking');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to create booking');
+            }
 
             if (shopConfig.payment.enabled) {
                 return {
