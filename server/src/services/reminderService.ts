@@ -218,7 +218,7 @@ const checkBirthdays = async () => {
         // Get settings
         let settings = await prisma.settings.findUnique({ where: { id: 'main' } });
         if (!settings) {
-            settings = { id: 'main', birthday_discount: 10, birthday_message: '🎂 С днём рождения! Дарим вам скидку {discount}%!', birthday_promo_days: 7 };
+            settings = { id: 'main', birthday_discount: 10, birthday_message: '🎂 С днём рождения! Дарим вам скидку {discount}%!', birthday_promo_days: 7, require_prepayment: false };
         }
 
         // Find users with birthday today
