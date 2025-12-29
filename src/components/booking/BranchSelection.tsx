@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 
 import { MapPin, Clock, Phone, ChevronRight, Building2 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
+import { shopConfig } from '@/config/shopConfig';
+
+const API_URL = shopConfig.apiUrl;
 
 interface Branch {
     id: string;
@@ -54,7 +57,7 @@ export function BranchSelection({ onBranchSelected }: BranchSelectionProps) {
 
     const fetchBranches = async () => {
         try {
-            const res = await fetch('/api/branches', {
+            const res = await fetch(`${API_URL}/branches`, {
                 headers: { 'ngrok-skip-browser-warning': 'true' }
             });
             const data = await res.json();
@@ -74,7 +77,7 @@ export function BranchSelection({ onBranchSelected }: BranchSelectionProps) {
         // Save preferred branch to user profile
         if (user?.id) {
             try {
-                await fetch(`/api/users/${user.id}/preferred-branch`, {
+                await fetch(`${API_URL}/users/${user.id}/preferred-branch`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',

@@ -90,7 +90,7 @@ export const shopConfig: ShopConfig = {
 
   // ----- API URL -----
   // Change this to your production URL when deploying
-  apiUrl: "https://f456cf90841c.ngrok-free.app/api",
+  apiUrl: "https://api-tg-miniapp.mooo.com:9444/api",
 
   // ----- BOOKING DEFAULTS -----
   bookingDefaults: {

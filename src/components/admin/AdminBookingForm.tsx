@@ -45,7 +45,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
     useEffect(() => {
         const fetchBranches = async () => {
             try {
-                const res = await fetch('/api/branches', { headers: { 'ngrok-skip-browser-warning': 'true' } });
+                const res = await fetch(`${API_URL}/branches`, { headers: { 'ngrok-skip-browser-warning': 'true' } });
                 const data = await res.json();
                 const activeBranches = Array.isArray(data) ? data.filter((b: Branch) => (b as any).is_active !== false) : [];
                 setBranches(activeBranches);
@@ -74,8 +74,8 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
         const fetchBranchData = async () => {
             try {
                 const [servicesRes, mastersRes] = await Promise.all([
-                    fetch(`/api/branches/${selectedBranch.id}/services`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
-                    fetch(`/api/branches/${selectedBranch.id}/masters`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
+                    fetch(`${API_URL}/branches/${selectedBranch.id}/services`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
+                    fetch(`${API_URL}/branches/${selectedBranch.id}/masters`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
                 ]);
                 const servicesData = await servicesRes.json();
                 const mastersData = await mastersRes.json();
@@ -141,7 +141,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
                 payment_id: isPaid ? `admin_cash_${Date.now()}` : null
             };
 
-            const res = await fetch('/api/bookings', {
+            const res = await fetch(`${API_URL}/bookings`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

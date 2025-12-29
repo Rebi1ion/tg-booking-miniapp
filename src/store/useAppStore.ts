@@ -134,8 +134,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (branch) {
             try {
                 const [servicesRes, mastersRes] = await Promise.all([
-                    fetch(`/api/branches/${branch.id}/services`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
-                    fetch(`/api/branches/${branch.id}/masters`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
+                    fetch(`${API_URL}/branches/${branch.id}/services`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
+                    fetch(`${API_URL}/branches/${branch.id}/masters`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
                 ]);
                 const services = await servicesRes.json();
                 const masters = await mastersRes.json();
