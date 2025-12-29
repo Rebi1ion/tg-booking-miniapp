@@ -113,36 +113,155 @@ export const createBookingInvoice = async (bookingId: string, customPrice?: numb
     }
 };
 
+// Prepayment data stored in payload
+interface PrepaymentData {
+    type: 'prepayment';
+    user_id: string;
+    service_id: string;
+    master_id: string;
+    start_time: string;
+    end_time: string;
+    client_name: string;
+    custom_price?: number;
+}
+
+// Create prepayment invoice (booking will be created after successful payment)
+export const createPrepaymentInvoice = async (
+    telegramUserId: number,
+    bookingData: {
+        user_id: string;
+        service_id: string;
+        master_id: string;
+        start_time: string;
+        end_time: string;
+        client_name: string;
+        custom_price?: number;
+    },
+    serviceInfo: {
+        name: string;
+        price: number;
+    },
+    masterName: string
+): Promise<boolean> => {
+    if (!BOT_TOKEN || !PAYMENT_PROVIDER_TOKEN) {
+        console.error('Payment: Missing BOT_TOKEN or PAYMENT_PROVIDER_TOKEN');
+        return false;
+    }
+
+    try {
+        const startDate = new Date(bookingData.start_time);
+        const date = startDate.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            timeZone: TIMEZONE
+        });
+        const time = startDate.toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: TIMEZONE
+        });
+
+        const finalPrice = bookingData.custom_price !== undefined ? bookingData.custom_price : serviceInfo.price;
+        let description = `📅 ${date} в ${time}\n👤 Мастер: ${masterName}`;
+        if (bookingData.custom_price !== undefined && bookingData.custom_price < serviceInfo.price) {
+            description += `\n🏷️ Скидка применена!`;
+        }
+
+        // Store booking data in payload as JSON
+        const payloadData: PrepaymentData = {
+            type: 'prepayment',
+            ...bookingData
+        };
+
+        const response = await axios.post<TelegramApiResponse>(`https://api.telegram.org/bot${BOT_TOKEN}/sendInvoice`, {
+            chat_id: telegramUserId,
+            title: serviceInfo.name,
+            description,
+            payload: JSON.stringify(payloadData), // Booking data encoded in payload
+            provider_token: PAYMENT_PROVIDER_TOKEN,
+            currency: 'RUB',
+            prices: [
+                {
+                    label: serviceInfo.name,
+                    amount: Math.round(finalPrice * 100)
+                }
+            ],
+            start_parameter: `prepayment_${Date.now()}`,
+            need_name: false,
+            need_phone_number: false,
+            need_email: false,
+            need_shipping_address: false,
+            is_flexible: false
+        });
+
+        console.log('Prepayment invoice sent:', response.data);
+        return response.data.ok;
+    } catch (error: any) {
+        console.error('Failed to send prepayment invoice:', error.response?.data || error.message);
+        return false;
+    }
+};
+
 // Initialize payment handlers for the bot
 export const initPaymentHandlers = (bot: Telegraf) => {
     // Handle pre-checkout query (required - must respond within 10 seconds)
     bot.on('pre_checkout_query', async (ctx) => {
         try {
-            const bookingId = ctx.preCheckoutQuery.invoice_payload;
+            const payload = ctx.preCheckoutQuery.invoice_payload;
 
-            // Verify booking exists and is still pending
-            const booking = await prisma.booking.findUnique({
-                where: { id: bookingId }
-            });
+            // Check if this is a prepayment (JSON payload) or regular booking payment (booking ID)
+            let isPrepayment = false;
+            try {
+                const parsedPayload = JSON.parse(payload);
+                if (parsedPayload.type === 'prepayment') {
+                    isPrepayment = true;
+                    // For prepayment, just check that time slot is still available
+                    const existingBooking = await prisma.booking.findFirst({
+                        where: {
+                            master_id: parsedPayload.master_id,
+                            start_time: new Date(parsedPayload.start_time),
+                            status: { not: 'cancelled' }
+                        }
+                    });
 
-            if (!booking) {
-                await ctx.answerPreCheckoutQuery(false, 'Бронирование не найдено');
-                return;
+                    if (existingBooking) {
+                        await ctx.answerPreCheckoutQuery(false, 'Это время уже занято');
+                        return;
+                    }
+
+                    await ctx.answerPreCheckoutQuery(true);
+                    console.log('Pre-checkout approved for prepayment');
+                    return;
+                }
+            } catch (e) {
+                // Not JSON - treat as booking ID
             }
 
-            if (booking.status === 'paid') {
-                await ctx.answerPreCheckoutQuery(false, 'Это бронирование уже оплачено');
-                return;
-            }
+            if (!isPrepayment) {
+                // Regular booking payment - verify booking exists
+                const booking = await prisma.booking.findUnique({
+                    where: { id: payload }
+                });
 
-            if (booking.status === 'cancelled') {
-                await ctx.answerPreCheckoutQuery(false, 'Это бронирование отменено');
-                return;
-            }
+                if (!booking) {
+                    await ctx.answerPreCheckoutQuery(false, 'Бронирование не найдено');
+                    return;
+                }
 
-            // All good - approve the payment
-            await ctx.answerPreCheckoutQuery(true);
-            console.log('Pre-checkout approved for booking:', bookingId);
+                if (booking.status === 'paid') {
+                    await ctx.answerPreCheckoutQuery(false, 'Это бронирование уже оплачено');
+                    return;
+                }
+
+                if (booking.status === 'cancelled') {
+                    await ctx.answerPreCheckoutQuery(false, 'Это бронирование отменено');
+                    return;
+                }
+
+                await ctx.answerPreCheckoutQuery(true);
+                console.log('Pre-checkout approved for booking:', payload);
+            }
         } catch (error) {
             console.error('Pre-checkout error:', error);
             await ctx.answerPreCheckoutQuery(false, 'Ошибка проверки платежа');
@@ -153,26 +272,65 @@ export const initPaymentHandlers = (bot: Telegraf) => {
     bot.on('successful_payment', async (ctx) => {
         try {
             const payment = ctx.message.successful_payment;
-            const bookingId = payment.invoice_payload;
+            const payload = payment.invoice_payload;
 
             console.log('Payment successful:', {
-                bookingId,
+                payload,
                 amount: payment.total_amount,
                 currency: payment.currency,
                 telegramPaymentChargeId: payment.telegram_payment_charge_id,
                 providerPaymentChargeId: payment.provider_payment_charge_id
             });
 
-            // Update booking status to paid
-            const booking = await prisma.booking.update({
-                where: { id: bookingId },
-                data: { status: 'paid' },
-                include: {
-                    service: true,
-                    master: true,
-                    user: true
+            let booking;
+            let isPrepayment = false;
+
+            // Check if this is a prepayment (JSON payload) or regular booking payment
+            try {
+                const parsedPayload = JSON.parse(payload);
+                if (parsedPayload.type === 'prepayment') {
+                    isPrepayment = true;
+                    // Create booking after successful prepayment
+                    booking = await prisma.booking.create({
+                        data: {
+                            user_id: parsedPayload.user_id,
+                            service_id: parsedPayload.service_id,
+                            master_id: parsedPayload.master_id,
+                            start_time: new Date(parsedPayload.start_time),
+                            end_time: new Date(parsedPayload.end_time),
+                            status: 'paid',
+                            client_name: parsedPayload.client_name,
+                            client_phone: 'N/A'
+                        },
+                        include: {
+                            service: true,
+                            master: true,
+                            user: true
+                        }
+                    });
+                    console.log('Booking created after prepayment:', booking.id);
                 }
-            });
+            } catch (e) {
+                // Not JSON - treat as booking ID
+            }
+
+            if (!isPrepayment) {
+                // Regular booking payment - update existing booking
+                booking = await prisma.booking.update({
+                    where: { id: payload },
+                    data: { status: 'paid' },
+                    include: {
+                        service: true,
+                        master: true,
+                        user: true
+                    }
+                });
+            }
+
+            if (!booking) {
+                console.error('No booking found or created');
+                return;
+            }
 
             const date = booking.start_time.toLocaleDateString('ru-RU', {
                 day: 'numeric',

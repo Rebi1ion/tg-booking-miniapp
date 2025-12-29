@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../utils/prisma';
 import dotenv from 'dotenv';
+import { createPrepaymentInvoice } from '../services/paymentService';
 
 dotenv.config();
 
@@ -79,6 +80,47 @@ router.post('/', async (req, res) => {
     const { user_id, service_id, master_id, start_time, end_time, status, payment_id, client_name, client_phone, send_invoice, custom_price, promo_id } = req.body;
 
     try {
+        // Check if prepayment is required (only for client bookings, not admin)
+        if (user_id) {
+            const settings = await prisma.settings.findUnique({ where: { id: 'main' } });
+            if (settings?.require_prepayment) {
+                // Get user telegram_id and service/master info for invoice
+                const user = await prisma.user.findUnique({ where: { id: user_id } });
+                const service = await prisma.service.findUnique({ where: { id: service_id } });
+                const master = await prisma.master.findUnique({ where: { id: master_id } });
+
+                if (!user || !service || !master) {
+                    return res.status(400).json({ error: 'Данные не найдены' });
+                }
+
+                // Send prepayment invoice - booking will be created after successful payment
+                const invoiceSent = await createPrepaymentInvoice(
+                    Number(user.telegram_id),
+                    {
+                        user_id,
+                        service_id,
+                        master_id,
+                        start_time,
+                        end_time,
+                        client_name: client_name || user.first_name || 'Клиент',
+                        custom_price
+                    },
+                    { name: service.name, price: service.price },
+                    master.name
+                );
+
+                if (invoiceSent) {
+                    return res.status(200).json({
+                        success: true,
+                        invoiceSent: true,
+                        message: 'Инвойс на оплату отправлен в Telegram. Запись будет создана после оплаты.'
+                    });
+                } else {
+                    return res.status(500).json({ error: 'Не удалось отправить инвойс' });
+                }
+            }
+        }
+
         // Check pending bookings limit (only for registered users, not admin bookings)
         if (user_id && MAX_PENDING_BOOKINGS > 0) {
             const pendingCount = await prisma.booking.count({

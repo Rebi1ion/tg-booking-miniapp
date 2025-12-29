@@ -91,7 +91,7 @@ export const AdminDashboard = () => {
             {/* Floating Add Booking Button */}
             <Button
                 onClick={() => setShowBookingForm(true)}
-                className="fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg bg-green-600 hover:bg-green-700"
+                className="fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
                 size="icon"
             >
                 <Plus className="h-6 w-6" />

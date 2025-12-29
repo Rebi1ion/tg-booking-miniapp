@@ -63,7 +63,7 @@ interface AppState {
     // Async Actions
     loadInitialData: (userId?: string) => Promise<void>;
     checkAvailability: (date: Date) => Promise<void>;
-    submitBooking: (customPrice?: number, promoId?: string) => Promise<{ success: boolean; error?: string }>;
+    submitBooking: (customPrice?: number, promoId?: string) => Promise<{ success: boolean; error?: string; invoiceSent?: boolean; message?: string }>;
     upsertUser: (telegramUser: { id: number; first_name: string; username?: string }) => Promise<User | null>;
     fetchUserBookings: () => Promise<void>;
 
@@ -308,9 +308,19 @@ export const useAppStore = create<AppState>((set, get) => ({
                 })
             });
 
+            const responseData = await response.json().catch(() => ({}));
+
+            // Handle prepayment flow - invoice was sent to Telegram
+            if (responseData.invoiceSent) {
+                return {
+                    success: true,
+                    invoiceSent: true,
+                    message: responseData.message || 'Инвойс на оплату отправлен в Telegram'
+                };
+            }
+
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to create booking');
+                throw new Error(responseData.error || 'Failed to create booking');
             }
 
             if (shopConfig.payment.enabled) {

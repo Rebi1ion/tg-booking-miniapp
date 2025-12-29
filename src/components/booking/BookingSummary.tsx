@@ -102,7 +102,10 @@ export const BookingSummary = () => {
         setIsProcessing(false);
 
         if (result.success) {
-            if (shopConfig.payment.enabled) {
+            if (result.invoiceSent) {
+                // Prepayment flow - invoice sent, booking will be created after payment
+                alert("💳 Инвойс на оплату отправлен в Telegram! Запись будет создана автоматически после оплаты.");
+            } else if (shopConfig.payment.enabled) {
                 alert("✅ Запись создана! Счёт на оплату отправлен вам в чат бота.");
             } else {
                 alert("✅ Запись подтверждена!");
