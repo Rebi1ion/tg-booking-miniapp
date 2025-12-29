@@ -10,6 +10,7 @@ import { ServicesManagement } from './ServicesManagement';
 import { PromotionsManagement } from './PromotionsManagement';
 import { BranchesManagement } from './BranchesManagement';
 import { AdminBookingForm } from './AdminBookingForm';
+import { SettingsPanel } from './SettingsPanel';
 import ReportGenerator from './ReportGenerator';
 import { shopConfig } from '@/config/shopConfig';
 
@@ -47,10 +48,11 @@ export const AdminDashboard = () => {
                     <TabsTrigger value="masters" className="text-xs py-2">Мастера</TabsTrigger>
                     <TabsTrigger value="services" className="text-xs py-2">Услуги</TabsTrigger>
                 </TabsList>
-                <TabsList className="grid w-full grid-cols-3 gap-1 mb-6 h-auto">
+                <TabsList className="grid w-full grid-cols-4 gap-1 mb-6 h-auto">
                     <TabsTrigger value="branches" className="text-xs py-2">Филиалы</TabsTrigger>
                     <TabsTrigger value="promos" className="text-xs py-2">Акции</TabsTrigger>
                     <TabsTrigger value="reports" className="text-xs py-2">Отчёты</TabsTrigger>
+                    <TabsTrigger value="settings" className="text-xs py-2">Настройки</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="today">
@@ -79,6 +81,10 @@ export const AdminDashboard = () => {
 
                 <TabsContent value="reports">
                     <ReportGenerator apiUrl={shopConfig.apiUrl.replace('/api', '')} />
+                </TabsContent>
+
+                <TabsContent value="settings">
+                    <SettingsPanel />
                 </TabsContent>
             </Tabs>
 

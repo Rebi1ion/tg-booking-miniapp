@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
 
 // PUT /api/settings - update settings
 router.put('/', async (req, res) => {
-    const { birthday_discount, birthday_message, birthday_promo_days } = req.body;
+    const { birthday_discount, birthday_message, birthday_promo_days, require_prepayment } = req.body;
     console.log("PUT /api/settings hit:", req.body);
     try {
         const settings = await prisma.settings.upsert({
@@ -40,13 +40,15 @@ router.put('/', async (req, res) => {
             update: {
                 birthday_discount: parseInt(birthday_discount) || 10,
                 birthday_message: birthday_message || '🎂 С днём рождения! Дарим вам скидку {discount}%!',
-                birthday_promo_days: parseInt(birthday_promo_days) || 7
+                birthday_promo_days: parseInt(birthday_promo_days) || 7,
+                require_prepayment: require_prepayment === true || require_prepayment === 'true'
             },
             create: {
                 id: 'main',
                 birthday_discount: parseInt(birthday_discount) || 10,
                 birthday_message: birthday_message || '🎂 С днём рождения! Дарим вам скидку {discount}%!',
-                birthday_promo_days: parseInt(birthday_promo_days) || 7
+                birthday_promo_days: parseInt(birthday_promo_days) || 7,
+                require_prepayment: require_prepayment === true || require_prepayment === 'true'
             }
         });
         res.json(settings);

@@ -149,5 +149,6 @@ model Settings {
   birthday_discount    Int     @default(10)      // % discount
   birthday_message     String  @default("🎂 С днём рождения! Дарим вам скидку {discount}%!")
   birthday_promo_days  Int     @default(7)       // Days the promo is valid
+  require_prepayment   Boolean @default(false)   // Require payment before booking is created
 }
 
