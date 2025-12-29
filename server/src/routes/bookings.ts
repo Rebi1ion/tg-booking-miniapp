@@ -1,0 +1,193 @@
+import { Router } from 'express';
+import prisma from '../utils/prisma';
+
+const router = Router();
+
+// GET /api/bookings
+router.get('/', async (req, res) => {
+    console.log("GET /api/bookings hit", req.query);
+    try {
+        const { date, master_id } = req.query;
+
+        // Build where clause based on query params
+        const where: any = {};
+
+        // Filter by master_id if provided
+        if (master_id && typeof master_id === 'string') {
+            where.master_id = master_id;
+        }
+
+        // Filter by date if provided
+        if (date && typeof date === 'string') {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            where.start_time = {
+                gte: startOfDay,
+                lte: endOfDay
+            };
+        }
+
+        const bookings = await prisma.booking.findMany({
+            where,
+            include: {
+                service: true,
+                master: true,
+                user: true
+            },
+            orderBy: { start_time: 'asc' }
+        });
+        res.json(bookings);
+    } catch (error: any) {
+        console.error("GET /api/bookings error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/bookings/user/:telegram_id
+router.get('/user/:telegram_id', async (req, res) => {
+    const { telegram_id } = req.params;
+    try {
+        const user = await prisma.user.findUnique({
+            where: { telegram_id: BigInt(telegram_id) }
+        });
+
+        if (!user) return res.json([]);
+
+        const bookings = await prisma.booking.findMany({
+            where: { user_id: user.id },
+            include: {
+                service: true,
+                master: true
+            },
+            orderBy: { start_time: 'desc' }
+        });
+        res.json(bookings);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/bookings
+router.post('/', async (req, res) => {
+    const { user_id, service_id, master_id, start_time, end_time, status, payment_id, client_name, client_phone, send_invoice, custom_price, promo_id } = req.body;
+
+    try {
+        const booking = await prisma.booking.create({
+            data: {
+                user_id,
+                service_id,
+                master_id,
+                start_time: new Date(start_time),
+                end_time: new Date(end_time),
+                status,
+                payment_id,
+                client_name,
+                client_phone
+            },
+            include: {
+                service: true,
+                master: true,
+                user: true
+            }
+        });
+
+        // Notify admins about new booking (async, don't wait)
+        const { notifyAdminsNewBooking } = require('../services/reminderService');
+        notifyAdminsNewBooking(booking).catch((err: any) => {
+            console.error('Failed to notify admins:', err);
+        });
+
+        // Send payment invoice if requested and user exists
+        // Use custom_price if provided (promo code discount), otherwise use service price
+        if (send_invoice && booking.user && booking.service?.price) {
+            const { createBookingInvoice } = require('../services/paymentService');
+            const invoicePrice = custom_price !== undefined ? custom_price : booking.service.price;
+            createBookingInvoice(booking.id, invoicePrice).catch((err: any) => {
+                console.error('Failed to send invoice:', err);
+            });
+        }
+
+        res.json(booking);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// DELETE /api/bookings/:id
+router.delete('/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log("DELETE /api/bookings/:id hit, id:", id);
+    try {
+        await prisma.booking.delete({
+            where: { id }
+        });
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error("DELETE /api/bookings error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH /api/bookings/:id - обновление статуса
+router.patch('/:id', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    console.log("PATCH /api/bookings/:id hit, id:", id, "status:", status);
+    try {
+        const booking = await prisma.booking.update({
+            where: { id },
+            data: { status },
+            include: {
+                service: true,
+                master: true,
+                user: true
+            }
+        });
+        res.json(booking);
+    } catch (error: any) {
+        console.error("PATCH /api/bookings error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/bookings/:id/send-invoice - отправить инвойс на оплату
+router.post('/:id/send-invoice', async (req, res) => {
+    const { id } = req.params;
+    console.log("POST /api/bookings/:id/send-invoice hit, id:", id);
+
+    try {
+        const booking = await prisma.booking.findUnique({
+            where: { id },
+            include: { user: true, service: true }
+        });
+
+        if (!booking) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        if (booking.status === 'paid') {
+            return res.status(400).json({ error: 'Booking already paid' });
+        }
+
+        if (!booking.user?.telegram_id) {
+            return res.status(400).json({ error: 'User has no telegram_id' });
+        }
+
+        const { createBookingInvoice } = require('../services/paymentService');
+        const result = await createBookingInvoice(id);
+
+        if (result) {
+            res.json({ success: true, message: 'Invoice sent' });
+        } else {
+            res.status(500).json({ error: 'Failed to send invoice' });
+        }
+    } catch (error: any) {
+        console.error("POST /api/bookings/:id/send-invoice error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+export default router;

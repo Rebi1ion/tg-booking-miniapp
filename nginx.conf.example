@@ -1,0 +1,98 @@
+# ============================================================================
+# NGINX Configuration Example for TMA Booking System
+# ============================================================================
+# 
+# Deployment Instructions:
+# 1. Replace YOUR_DOMAIN with your actual domain
+# 2. Copy this file to /etc/nginx/sites-available/miniapp
+# 3. Create symlink: sudo ln -s /etc/nginx/sites-available/miniapp /etc/nginx/sites-enabled/
+# 4. Test config: sudo nginx -t
+# 5. Reload nginx: sudo systemctl reload nginx
+# 6. Get SSL: sudo certbot --nginx -d YOUR_DOMAIN -d api.YOUR_DOMAIN
+#
+# ============================================================================
+
+# Frontend (React/Vite build)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name YOUR_DOMAIN;  # e.g., miniapp.example.com
+
+    root /var/www/miniapps-business/dist;
+    index index.html;
+
+    # Gzip compression
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+
+    # Handle React Router (SPA)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+}
+
+# Backend API (Express)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.YOUR_DOMAIN;  # e.g., api.miniapp.example.com
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        
+        # Headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket support (for future use)
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Health check endpoint
+    location /health {
+        proxy_pass http://127.0.0.1:3000/health;
+    }
+}
+
+# ============================================================================
+# After running certbot, it will modify this file to add SSL configuration.
+# The SSL section will look like this:
+# ============================================================================
+#
+# server {
+#     listen 443 ssl;
+#     server_name YOUR_DOMAIN;
+#     
+#     ssl_certificate /etc/letsencrypt/live/YOUR_DOMAIN/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/YOUR_DOMAIN/privkey.pem;
+#     include /etc/letsencrypt/options-ssl-nginx.conf;
+#     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+#     
+#     # ... rest of config
+# }
+#
+# HTTP to HTTPS redirect:
+# server {
+#     listen 80;
+#     server_name YOUR_DOMAIN;
+#     return 301 https://$host$request_uri;
+# }

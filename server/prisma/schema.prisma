@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String    @id @default(uuid())
+  telegram_id          BigInt    @unique
+  first_name           String?
+  last_name            String?
+  username             String?
+  photo_url            String?
+  birthday             DateTime?
+  preferred_branch_id  String?
+  is_admin             Boolean   @default(false)
+  created_at           DateTime  @default(now())
+  bookings             Booking[]
+}
+
+model Branch {
+  id           String          @id @default(uuid())
+  name         String
+  address      String?
+  phone        String?
+  start_hour   Int             @default(10)
+  end_hour     Int             @default(20)
+  is_active    Boolean         @default(true)
+  created_at   DateTime        @default(now())
+  masters      MasterBranch[]
+  services     BranchService[]
+  bookings     Booking[]
+}
+
+model MasterBranch {
+  id         String  @id @default(uuid())
+  master     Master  @relation(fields: [master_id], references: [id], onDelete: Cascade)
+  master_id  String
+  branch     Branch  @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  branch_id  String
+
+  @@unique([master_id, branch_id])
+}
+
+model BranchService {
+  id         String  @id @default(uuid())
+  branch     Branch  @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  branch_id  String
+  service    Service @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  service_id String
+
+  @@unique([branch_id, service_id])
+}
+
+model Master {
+  id            String          @id @default(uuid())
+  name          String
+  telegram_id   BigInt?         @unique
+  photo_url     String?
+  role          String?
+  bio           String?
+  is_active     Boolean         @default(true)
+  start_hour    Int             @default(10)
+  end_hour      Int             @default(20)
+  slot_interval Int             @default(30)
+  created_at    DateTime        @default(now())
+  services      MasterService[]
+  bookings      Booking[]
+  branches      MasterBranch[]
+}
+
+model Service {
+  id               String          @id @default(uuid())
+  name             String
+  description      String?
+  duration_minutes Int
+  price            Int
+  image_url        String?
+  category         String?
+  is_active        Boolean         @default(true)
+  created_at       DateTime        @default(now())
+  masters          MasterService[]
+  bookings         Booking[]
+  branches         BranchService[]
+}
+
+model MasterService {
+  id         String  @id @default(uuid())
+  master     Master  @relation(fields: [master_id], references: [id], onDelete: Cascade)
+  master_id  String
+  service    Service @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  service_id String
+
+  @@unique([master_id, service_id])
+}
+
+model Booking {
+  id                String   @id @default(uuid())
+  user              User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user_id           String?
+  master            Master?  @relation(fields: [master_id], references: [id], onDelete: SetNull)
+  master_id         String?
+  service           Service? @relation(fields: [service_id], references: [id], onDelete: SetNull)
+  service_id        String?
+  branch            Branch?  @relation(fields: [branch_id], references: [id], onDelete: SetNull)
+  branch_id         String?
+  start_time        DateTime
+  end_time          DateTime
+  status            String   @default("pending") // pending, paid, cancelled, completed
+  payment_id        String?
+  client_phone      String?
+  client_name       String?
+  reminder_24h_sent Boolean  @default(false)
+  reminder_1h_sent  Boolean  @default(false)
+  created_at        DateTime @default(now())
+}
+
+model Promotion {
+  id                 String       @id @default(uuid())
+  name               String
+  description        String?
+  discount_type      String       // 'percent' | 'fixed'
+  discount_value     Int
+  promo_code         String?      @unique
+  start_date         DateTime?
+  end_date           DateTime?
+  is_active          Boolean      @default(true)
+  applies_to         String?      // 'all' or comma-separated service IDs
+  max_uses_per_user  Int          @default(1)  // Max times one user can use this promo
+  created_at         DateTime     @default(now())
+  usages             PromoUsage[]
+}
+
+model PromoUsage {
+  id           String    @id @default(uuid())
+  promotion    Promotion @relation(fields: [promotion_id], references: [id], onDelete: Cascade)
+  promotion_id String
+  user_id      String
+  used_at      DateTime  @default(now())
+
+  @@unique([promotion_id, user_id])  // One record per user per promo (count stored differently)
+}
+
+model Settings {
+  id                   String  @id @default("main")
+  birthday_discount    Int     @default(10)      // % discount
+  birthday_message     String  @default("🎂 С днём рождения! Дарим вам скидку {discount}%!")
+  birthday_promo_days  Int     @default(7)       // Days the promo is valid
+}
+

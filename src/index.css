@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+  /* Telegram Theme CSS Variables - установлены как дефолтные */
+  :root {
+    /* Telegram variables with fallbacks */
+    --tg-bg-color: #ffffff;
+    --tg-text-color: #000000;
+    --tg-hint-color: #999999;
+    --tg-link-color: #2481cc;
+    --tg-button-color: #2481cc;
+    --tg-button-text-color: #ffffff;
+    --tg-secondary-bg-color: #f0f0f0;
+
+    /* App theme variables - mapped to Telegram vars */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* Body использует Telegram цвета */
+  body {
+    background-color: var(--tg-bg-color);
+    color: var(--tg-text-color);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  /* Карточки адаптируются к теме */
+  .bg-card {
+    background-color: var(--tg-secondary-bg-color);
+  }
+
+  /* Текст подсказок */
+  .text-muted-foreground {
+    color: var(--tg-hint-color);
+  }
+
+  /* Ссылки */
+  a {
+    color: var(--tg-link-color);
+  }
+}
+
+@layer components {
+
+  /* Кнопки используют Telegram цвета */
+  .btn-primary,
+  button[class*="bg-primary"] {
+    background-color: var(--tg-button-color) !important;
+    color: var(--tg-button-text-color) !important;
+  }
+
+  /* Карточка с адаптивным фоном */
+  .card-adaptive {
+    background-color: var(--tg-secondary-bg-color);
+    color: var(--tg-text-color);
+  }
+
+  /* Навигационная панель */
+  .nav-bar {
+    background-color: var(--tg-bg-color);
+    border-color: var(--tg-hint-color);
+  }
+
+  /* Таб-контент */
+  .tab-content {
+    background-color: var(--tg-bg-color);
+  }
+
+  /* Вторичные карточки/секции */
+  .section-secondary {
+    background-color: var(--tg-secondary-bg-color);
+  }
+}
+
+@layer utilities {
+
+  /* Telegram-specific utility classes */
+  .tg-bg {
+    background-color: var(--tg-bg-color);
+  }
+
+  .tg-bg-secondary {
+    background-color: var(--tg-secondary-bg-color);
+  }
+
+  .tg-text {
+    color: var(--tg-text-color);
+  }
+
+  .tg-text-hint {
+    color: var(--tg-hint-color);
+  }
+
+  .tg-text-link {
+    color: var(--tg-link-color);
+  }
+
+  .tg-button {
+    background-color: var(--tg-button-color);
+    color: var(--tg-button-text-color);
+  }
+
+  .tg-border {
+    border-color: var(--tg-hint-color);
+  }
+}
+
+/* Calendar component fixes */
+.rdp-week,
+.rdp-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  width: 100%;
+}
+
+.rdp-weekdays>*,
+.rdp-week>* {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Calendar theme adaptation */
+.rdp {
+  --rdp-accent-color: var(--tg-button-color);
+  --rdp-background-color: var(--tg-secondary-bg-color);
+}
+
+/* Modal/Dialog adaptations */
+[role="dialog"] {
+  background-color: var(--tg-bg-color);
+  color: var(--tg-text-color);
+}
+
+/* Input fields */
+input,
+textarea,
+select {
+  background-color: var(--tg-secondary-bg-color);
+  color: var(--tg-text-color);
+  border-color: var(--tg-hint-color);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--tg-hint-color);
+}
+
+/* Focus states */
+input:focus,
+textarea:focus,
+select:focus,
+button:focus {
+  outline-color: var(--tg-button-color);
+  border-color: var(--tg-button-color);
+}
+
+/* Cards and containers */
+.border {
+  border-color: color-mix(in srgb, var(--tg-hint-color) 30%, transparent);
+}
+
+/* Scrollbar styling for dark themes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--tg-secondary-bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--tg-hint-color);
+  border-radius: 3px;
+}
+
+/* Skeleton loaders */
+.animate-pulse {
+  background-color: var(--tg-secondary-bg-color);
+}
+
+/* Badge and status indicators preserve their colors - no override needed */
+
+/* Fix for shadcn components */
+[data-state] {
+  --tw-bg-opacity: 1;
+}

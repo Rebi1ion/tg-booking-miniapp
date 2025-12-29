@@ -1,0 +1,225 @@
+import React, { useState } from 'react';
+import { useAppStore } from '@/store/useAppStore';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { shopConfig } from '@/config/shopConfig';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import { Loader2, Tag, CheckCircle2, XCircle } from 'lucide-react';
+
+interface PromoValidation {
+    valid: boolean;
+    error?: string;
+    promotion?: {
+        id: string;
+        name: string;
+        discount_type: 'percent' | 'fixed';
+        discount_value: number;
+    };
+}
+
+export const BookingSummary = () => {
+    const { selectedService, selectedMaster, selectedDate, selectedTimeSlot, submitBooking, resetBooking, user } = useAppStore();
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [promoCode, setPromoCode] = useState('');
+    const [promoValidation, setPromoValidation] = useState<PromoValidation | null>(null);
+    const [isValidating, setIsValidating] = useState(false);
+
+    if (!selectedService || !selectedMaster || !selectedDate || !selectedTimeSlot) return null;
+
+    const validatePromoCode = async () => {
+        if (!promoCode.trim()) {
+            setPromoValidation(null);
+            return;
+        }
+
+        setIsValidating(true);
+        try {
+            const res = await fetch(`${shopConfig.apiUrl}/promotions/validate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify({
+                    promo_code: promoCode.trim(),
+                    service_id: selectedService.id,
+                    user_id: user?.id  // Pass user_id for usage limit checking
+                })
+            });
+            const data = await res.json();
+            setPromoValidation(data);
+        } catch (error) {
+            setPromoValidation({ valid: false, error: 'Ошибка проверки' });
+        } finally {
+            setIsValidating(false);
+        }
+    };
+
+
+    // Calculate discounted price
+    const originalPrice = selectedService.price;
+    let discountAmount = 0;
+    let finalPrice = originalPrice;
+
+    if (promoValidation?.valid && promoValidation.promotion) {
+        const { discount_type, discount_value } = promoValidation.promotion;
+        if (discount_type === 'percent') {
+            discountAmount = Math.round(originalPrice * discount_value / 100);
+        } else {
+            discountAmount = discount_value;
+        }
+        finalPrice = Math.max(0, originalPrice - discountAmount);
+    }
+
+    const handleBooking = async () => {
+        setIsProcessing(true);
+
+        // Pass the final price (with discount if promo applied)
+        const result = await submitBooking(finalPrice, promoValidation?.promotion?.id);
+
+        // If booking successful and promo was used, record the usage
+        if (result.success && promoValidation?.valid && promoValidation.promotion && user) {
+            try {
+                await fetch(`${shopConfig.apiUrl}/promotions/use`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        promotion_id: promoValidation.promotion.id,
+                        user_id: user.id
+                    })
+                });
+            } catch (e) {
+                console.error('Failed to record promo usage:', e);
+            }
+        }
+
+        setIsProcessing(false);
+
+        if (result.success) {
+            if (shopConfig.payment.enabled) {
+                alert("✅ Запись создана! Счёт на оплату отправлен вам в чат бота.");
+            } else {
+                alert("✅ Запись подтверждена!");
+            }
+            resetBooking();
+        } else {
+            alert(result.error || "Не удалось создать запись.");
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <h2 className="text-xl font-bold text-center">Подтверждение записи</h2>
+
+            <Card className="border-primary/20 bg-primary/5">
+                <CardHeader>
+                    <CardTitle className="text-center text-primary">
+                        {shopConfig.appName}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Услуга</span>
+                        <span className="font-medium">{selectedService.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Мастер</span>
+                        <span className="font-medium">{selectedMaster.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Дата</span>
+                        <span className="font-medium uppercase">{format(selectedDate, 'd MMMM yyyy', { locale: ru })}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Время</span>
+                        <span className="font-medium">{selectedTimeSlot}</span>
+                    </div>
+
+                    {/* Promo Code Input */}
+                    <div className="border-t pt-4 space-y-2">
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    value={promoCode}
+                                    onChange={(e) => {
+                                        setPromoCode(e.target.value.toUpperCase());
+                                        setPromoValidation(null);
+                                    }}
+                                    placeholder="Промокод"
+                                    className="pl-9"
+                                />
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={validatePromoCode}
+                                disabled={isValidating || !promoCode.trim()}
+                            >
+                                {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'ОК'}
+                            </Button>
+                        </div>
+
+                        {/* Promo validation result */}
+                        {promoValidation && (
+                            <div className={`flex items-center gap-2 text-sm ${promoValidation.valid ? 'text-green-600' : 'text-red-500'}`}>
+                                {promoValidation.valid ? (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        <span>Скидка применена: {promoValidation.promotion?.discount_type === 'percent'
+                                            ? `-${promoValidation.promotion.discount_value}%`
+                                            : `-${promoValidation.promotion?.discount_value} ₽`
+                                        }</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <XCircle className="w-4 h-4" />
+                                        <span>{promoValidation.error}</span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Price Summary */}
+                    <div className="border-t pt-4 space-y-2">
+                        {discountAmount > 0 && (
+                            <>
+                                <div className="flex justify-between text-muted-foreground">
+                                    <span>Стоимость</span>
+                                    <span className="line-through">{originalPrice} {shopConfig.currency}</span>
+                                </div>
+                                <div className="flex justify-between text-green-600">
+                                    <span>Скидка</span>
+                                    <span>-{discountAmount} {shopConfig.currency}</span>
+                                </div>
+                            </>
+                        )}
+                        <div className="flex justify-between text-lg font-bold">
+                            <span>Итого</span>
+                            <span>{finalPrice} {shopConfig.currency}</span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Button
+                onClick={handleBooking}
+                className="w-full h-12 text-lg bg-[#007AFF] hover:bg-[#007AFF]/90 font-bold"
+                disabled={isProcessing}
+            >
+                {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                {shopConfig.payment.enabled
+                    ? `Оплатить ${finalPrice} ${shopConfig.currency === 'RUB' ? '₽' : shopConfig.currency}`
+                    : "Записаться"
+                }
+            </Button>
+        </div>
+    );
+};
