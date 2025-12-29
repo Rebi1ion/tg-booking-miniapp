@@ -157,12 +157,31 @@ export const TodaySchedule = () => {
                                 </div>
 
                                 {/* Клиент */}
-                                <div className="flex items-center gap-1 text-sm mt-2 opacity-80">
-                                    <User className="h-3 w-3" />
-                                    <span>Клиент: {getClientName(booking)}</span>
-                                    {booking.user?.telegram_id && (
-                                        <span className="text-xs text-muted-foreground ml-1">(ID: {booking.user.telegram_id.toString()})</span>
-                                    )}
+                                <div className="mt-2 text-sm">
+                                    <div className="flex items-center gap-2 opacity-70 mb-1">
+                                        <User className="h-3 w-3" />
+                                        <span>Клиент:</span>
+                                    </div>
+                                    <div className="pl-5 flex flex-col">
+                                        <span className="font-medium leading-tight">
+                                            {booking.user?.first_name || booking.client_name || 'Гость'}
+                                        </span>
+                                        {booking.user?.username && (
+                                            <a
+                                                href={`https://t.me/${booking.user.username}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-blue-500 hover:underline leading-tight"
+                                            >
+                                                @{booking.user.username}
+                                            </a>
+                                        )}
+                                        {booking.user?.telegram_id && (
+                                            <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                                ID: {booking.user.telegram_id.toString()}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
