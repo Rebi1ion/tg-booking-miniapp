@@ -179,16 +179,28 @@ router.delete('/:id/services/:serviceId', async (req, res) => {
     }
 });
 
-// GET /api/branches/:id/masters - get masters for branch
+// GET /api/branches/:id/masters - get masters for branch (with their services)
 router.get('/:id/masters', async (req, res) => {
     const { id: branch_id } = req.params;
     console.log(`GET /api/branches/${branch_id}/masters hit`);
     try {
         const masterBranches = await prisma.masterBranch.findMany({
             where: { branch_id },
-            include: { master: true }
+            include: {
+                master: {
+                    include: {
+                        services: {
+                            include: { service: true }
+                        }
+                    }
+                }
+            }
         });
-        const masters = masterBranches.map(mb => mb.master);
+        // Transform to include services array directly on master
+        const masters = masterBranches.map(mb => ({
+            ...mb.master,
+            services: mb.master.services.map(ms => ms.service)
+        }));
         res.json(masters);
     } catch (error: any) {
         console.error(`GET /api/branches/${branch_id}/masters error:`, error);
