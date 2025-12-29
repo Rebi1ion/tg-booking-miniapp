@@ -168,17 +168,29 @@ export const createPrepaymentInvoice = async (
             description += `\n🏷️ Скидка применена!`;
         }
 
-        // Store booking data in payload as JSON
-        const payloadData: PrepaymentData = {
-            type: 'prepayment',
-            ...bookingData
-        };
+        // First create booking with special status "pending_prepayment"
+        // This will be updated to "paid" after successful payment
+        const booking = await prisma.booking.create({
+            data: {
+                user_id: bookingData.user_id,
+                service_id: bookingData.service_id,
+                master_id: bookingData.master_id,
+                start_time: new Date(bookingData.start_time),
+                end_time: new Date(bookingData.end_time),
+                status: 'pending_prepayment', // Special status - not visible to admins until paid
+                client_name: bookingData.client_name,
+                client_phone: 'N/A'
+            }
+        });
+
+        // Use short payload format: "prepay:BOOKING_ID"
+        const payload = `prepay:${booking.id}`;
 
         const response = await axios.post<TelegramApiResponse>(`https://api.telegram.org/bot${BOT_TOKEN}/sendInvoice`, {
             chat_id: telegramUserId,
             title: serviceInfo.name,
             description,
-            payload: JSON.stringify(payloadData), // Booking data encoded in payload
+            payload, // Short payload with booking ID
             provider_token: PAYMENT_PROVIDER_TOKEN,
             currency: 'RUB',
             prices: [
@@ -187,7 +199,7 @@ export const createPrepaymentInvoice = async (
                     amount: Math.round(finalPrice * 100)
                 }
             ],
-            start_parameter: `prepayment_${Date.now()}`,
+            start_parameter: `prepayment_${booking.id.slice(0, 8)}`,
             need_name: false,
             need_phone_number: false,
             need_email: false,
@@ -196,7 +208,14 @@ export const createPrepaymentInvoice = async (
         });
 
         console.log('Prepayment invoice sent:', response.data);
-        return response.data.ok;
+
+        if (!response.data.ok) {
+            // If invoice failed, delete the pending booking
+            await prisma.booking.delete({ where: { id: booking.id } });
+            return false;
+        }
+
+        return true;
     } catch (error: any) {
         console.error('Failed to send prepayment invoice:', error.response?.data || error.message);
         return false;
@@ -210,38 +229,11 @@ export const initPaymentHandlers = (bot: Telegraf) => {
         try {
             const payload = ctx.preCheckoutQuery.invoice_payload;
 
-            // Check if this is a prepayment (JSON payload) or regular booking payment (booking ID)
-            let isPrepayment = false;
-            try {
-                const parsedPayload = JSON.parse(payload);
-                if (parsedPayload.type === 'prepayment') {
-                    isPrepayment = true;
-                    // For prepayment, just check that time slot is still available
-                    const existingBooking = await prisma.booking.findFirst({
-                        where: {
-                            master_id: parsedPayload.master_id,
-                            start_time: new Date(parsedPayload.start_time),
-                            status: { not: 'cancelled' }
-                        }
-                    });
-
-                    if (existingBooking) {
-                        await ctx.answerPreCheckoutQuery(false, 'Это время уже занято');
-                        return;
-                    }
-
-                    await ctx.answerPreCheckoutQuery(true);
-                    console.log('Pre-checkout approved for prepayment');
-                    return;
-                }
-            } catch (e) {
-                // Not JSON - treat as booking ID
-            }
-
-            if (!isPrepayment) {
-                // Regular booking payment - verify booking exists
+            // Check if this is a prepayment (prepay:BOOKING_ID format)
+            if (payload.startsWith('prepay:')) {
+                const bookingId = payload.replace('prepay:', '');
                 const booking = await prisma.booking.findUnique({
-                    where: { id: payload }
+                    where: { id: bookingId }
                 });
 
                 if (!booking) {
@@ -250,18 +242,42 @@ export const initPaymentHandlers = (bot: Telegraf) => {
                 }
 
                 if (booking.status === 'paid') {
-                    await ctx.answerPreCheckoutQuery(false, 'Это бронирование уже оплачено');
+                    await ctx.answerPreCheckoutQuery(false, 'Уже оплачено');
                     return;
                 }
 
                 if (booking.status === 'cancelled') {
-                    await ctx.answerPreCheckoutQuery(false, 'Это бронирование отменено');
+                    await ctx.answerPreCheckoutQuery(false, 'Бронирование отменено');
                     return;
                 }
 
                 await ctx.answerPreCheckoutQuery(true);
-                console.log('Pre-checkout approved for booking:', payload);
+                console.log('Pre-checkout approved for prepayment:', bookingId);
+                return;
             }
+
+            // Regular booking payment - verify booking exists
+            const booking = await prisma.booking.findUnique({
+                where: { id: payload }
+            });
+
+            if (!booking) {
+                await ctx.answerPreCheckoutQuery(false, 'Бронирование не найдено');
+                return;
+            }
+
+            if (booking.status === 'paid') {
+                await ctx.answerPreCheckoutQuery(false, 'Это бронирование уже оплачено');
+                return;
+            }
+
+            if (booking.status === 'cancelled') {
+                await ctx.answerPreCheckoutQuery(false, 'Это бронирование отменено');
+                return;
+            }
+
+            await ctx.answerPreCheckoutQuery(true);
+            console.log('Pre-checkout approved for booking:', payload);
         } catch (error) {
             console.error('Pre-checkout error:', error);
             await ctx.answerPreCheckoutQuery(false, 'Ошибка проверки платежа');
@@ -283,38 +299,23 @@ export const initPaymentHandlers = (bot: Telegraf) => {
             });
 
             let booking;
-            let isPrepayment = false;
+            let bookingId = payload;
 
-            // Check if this is a prepayment (JSON payload) or regular booking payment
-            try {
-                const parsedPayload = JSON.parse(payload);
-                if (parsedPayload.type === 'prepayment') {
-                    isPrepayment = true;
-                    // Create booking after successful prepayment
-                    booking = await prisma.booking.create({
-                        data: {
-                            user_id: parsedPayload.user_id,
-                            service_id: parsedPayload.service_id,
-                            master_id: parsedPayload.master_id,
-                            start_time: new Date(parsedPayload.start_time),
-                            end_time: new Date(parsedPayload.end_time),
-                            status: 'paid',
-                            client_name: parsedPayload.client_name,
-                            client_phone: 'N/A'
-                        },
-                        include: {
-                            service: true,
-                            master: true,
-                            user: true
-                        }
-                    });
-                    console.log('Booking created after prepayment:', booking.id);
-                }
-            } catch (e) {
-                // Not JSON - treat as booking ID
-            }
-
-            if (!isPrepayment) {
+            // Check if this is a prepayment (prepay:BOOKING_ID format)
+            if (payload.startsWith('prepay:')) {
+                bookingId = payload.replace('prepay:', '');
+                // Update existing pending_prepayment booking to paid
+                booking = await prisma.booking.update({
+                    where: { id: bookingId },
+                    data: { status: 'paid' },
+                    include: {
+                        service: true,
+                        master: true,
+                        user: true
+                    }
+                });
+                console.log('Prepayment booking confirmed:', booking.id);
+            } else {
                 // Regular booking payment - update existing booking
                 booking = await prisma.booking.update({
                     where: { id: payload },
