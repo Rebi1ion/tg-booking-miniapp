@@ -41,7 +41,6 @@ export function BranchesManagement() {
     const [isCreating, setIsCreating] = useState(false);
     const [configuringBranch, setConfiguringBranch] = useState<Branch | null>(null);
     const [selectedMasters, setSelectedMasters] = useState<string[]>([]);
-    const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -127,7 +126,6 @@ export function BranchesManagement() {
     const handleConfigure = (branch: Branch) => {
         setConfiguringBranch(branch);
         setSelectedMasters(branch.masters?.map(m => m.master.id) || []);
-        setSelectedServices(branch.services?.map(s => s.service.id) || []);
     };
 
     const handleMasterToggle = async (masterId: string) => {
@@ -151,30 +149,6 @@ export function BranchesManagement() {
             }
         } catch (error) {
             console.error('Failed to toggle master:', error);
-        }
-    };
-
-    const handleServiceToggle = async (serviceId: string) => {
-        if (!configuringBranch) return;
-        const isSelected = selectedServices.includes(serviceId);
-
-        try {
-            if (isSelected) {
-                await fetch(`${shopConfig.apiUrl}/branches/${configuringBranch.id}/services/${serviceId}`, {
-                    method: 'DELETE',
-                    headers: { 'ngrok-skip-browser-warning': 'true' }
-                });
-                setSelectedServices(prev => prev.filter(id => id !== serviceId));
-            } else {
-                await fetch(`${shopConfig.apiUrl}/branches/${configuringBranch.id}/services`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-                    body: JSON.stringify({ service_id: serviceId })
-                });
-                setSelectedServices(prev => [...prev, serviceId]);
-            }
-        } catch (error) {
-            console.error('Failed to toggle service:', error);
         }
     };
 
@@ -207,6 +181,9 @@ export function BranchesManagement() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Выберите мастеров, работающих в этом филиале. Услуги филиала определяются автоматически на основе услуг выбранных мастеров.
+                        </p>
                         <div className="space-y-2">
                             {allMasters.map(master => (
                                 <label key={master.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer">
@@ -218,33 +195,23 @@ export function BranchesManagement() {
                                 </label>
                             ))}
                             {allMasters.length === 0 && (
-                                <p className="text-muted-foreground text-sm">Нет доступных мастеров</p>
+                                <p className="text-muted-foreground text-sm">Сначала добавьте мастеров в разделе "Мастера"</p>
                             )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Services Assignment */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <Scissors className="w-5 h-5" /> Услуги филиала
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {allServices.map(service => (
-                                <label key={service.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer">
-                                    <Checkbox
-                                        checked={selectedServices.includes(service.id)}
-                                        onCheckedChange={() => handleServiceToggle(service.id)}
-                                    />
-                                    <span>{service.name}</span>
-                                </label>
-                            ))}
-                            {allServices.length === 0 && (
-                                <p className="text-muted-foreground text-sm">Нет доступных услуг</p>
-                            )}
+                {/* Info about services */}
+                <Card className="border-blue-200 bg-blue-50/50">
+                    <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                            <Scissors className="w-5 h-5 text-blue-600 mt-0.5" />
+                            <div>
+                                <p className="font-medium text-blue-900">Услуги филиала</p>
+                                <p className="text-sm text-blue-700">
+                                    Услуги определяются автоматически. Назначьте мастерам услуги в разделе "Мастера", затем добавьте мастеров в филиал.
+                                </p>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

@@ -1,40 +1,46 @@
-# 💇‍♀️ TMA Booking System - White Label
+# 💇‍♀️ TMA Booking System — White Label
 
-**Готовая система онлайн-бронирования для Telegram Mini Apps (TMA) в сфере красоты**
+**Telegram Mini App для онлайн-бронирования в сфере красоты**
 
-Это "White-Label" решение для барбершопов, салонов красоты и СПА. Оно включает в себя удобный мастер бронирования для клиентов и административную панель для управления записями.
+Готовое решение для барбершопов, салонов красоты, СПА и nail-студий. Клиенты записываются через Telegram, администраторы управляют записями.
 
 ---
 
 ## 🚀 Особенности
 
-- **Дизайн:** Современный UI (Shadcn/UI + Tailwind), адаптирован под мобильные устройства
-- **Бронирование:** Выбор услуги → Мастера → Даты/Времени → Оплата
-- **Админка:** Просмотр расписания, календарь записей, управление услугами и мастерами
-- **Филиалы:** Поддержка нескольких филиалов
-- **Оплата:** Интеграция с Telegram Payments (YooKassa)
-- **Уведомления:** Автоматические напоминания о записи
-- **White-Label:** Все настройки в одном файле
+- 📱 Адаптивный дизайн для мобильных
+- 📅 Мастер бронирования: Филиал → Услуга → Мастер → Дата/Время
+- 👨‍💼 Админ-панель: расписание, записи, услуги, мастера
+- 💳 Интеграция с Telegram Payments (YooKassa)
+- 🔔 Автоматические напоминания клиентам
+- 🏢 Поддержка нескольких филиалов
+- 🎨 **White-Label**: настройка через один файл
 
 ---
 
 ## 📋 Требования
 
-- [Node.js](https://nodejs.org/) 18+
-- [Git](https://git-scm.com/)
-- Telegram Бот ([@BotFather](https://t.me/BotFather))
-- Для production: VPS/сервер с Ubuntu 20.04+
+| Компонент | Требование |
+|-----------|------------|
+| Node.js | **20+** (обязательно) |
+| ОС сервера | Ubuntu 20.04+ / Debian 11+ |
+| Telegram Бот | Создать через [@BotFather](https://t.me/BotFather) |
 
 ---
 
-## 🛠 Локальная Установка
+## ⚡ Быстрый старт (5 минут)
 
-### 1. Клонирование и установка
+### 1. Клонировать проект
 
 ```bash
-git clone <URL_РЕПОЗИТОРИЯ>
-cd miniapps-business
+cd /var/www
+git clone https://github.com/YOUR_REPO/tg-miniapp.git
+cd tg-miniapp
+```
 
+### 2. Установить зависимости
+
+```bash
 # Frontend
 npm install
 
@@ -46,73 +52,144 @@ npx prisma db push
 cd ..
 ```
 
-### 2. Настройка переменных окружения
+### 3. Настроить переменные окружения
 
 ```bash
-# Frontend
 cp .env.example .env
-# Отредактируйте .env
-
-# Backend
 cp server/.env.example server/.env
-# Отредактируйте server/.env
 ```
 
-### 3. Запуск
+Отредактируйте `server/.env`:
+```env
+TELEGRAM_BOT_TOKEN="ваш_токен_бота"
+ADMIN_IDS="ваш_telegram_id"
+MINIAPP_URL="https://miniapp.yourdomain.com:9443"
+```
+
+### 4. Настроить бизнес
+
+Отредактируйте `src/config/shopConfig.ts` (см. раздел White-Label ниже).
+
+### 5. Собрать и запустить
 
 ```bash
-# Terminal 1 - Backend
+npm run build
 cd server
-npm run dev
-
-# Terminal 2 - Frontend
-npm run dev
+pm2 start ecosystem.config.cjs --only miniapp-backend
+pm2 save
 ```
-
-Откройте [http://localhost:5173](http://localhost:5173)
 
 ---
 
-## ⚙️ White-Label Настройка
+## 🖥 Деплой на VPS
 
-Отредактируйте **один файл** для настройки под ваш бизнес:
+### Установка зависимостей на сервере
 
-📁 `src/config/shopConfig.ts`
+```bash
+# Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# PM2, Nginx, Certbot
+sudo npm install -g pm2
+sudo apt install -y nginx certbot python3-certbot-nginx
+```
+
+### Настройка Nginx
+
+Создайте `/etc/nginx/sites-available/miniapp`:
+
+```nginx
+# Frontend (порт 9443 — если 443 занят VPN)
+server {
+    listen 9443 ssl;
+    server_name miniapp.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/miniapp.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/miniapp.yourdomain.com/privkey.pem;
+
+    root /var/www/tg-miniapp/dist;
+    index index.html;
+
+    location / {
+        try_files $uri /index.html =404;
+    }
+}
+
+# Backend API (порт 9444)
+server {
+    listen 9444 ssl;
+    server_name api.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/miniapp.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/miniapp.yourdomain.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/miniapp /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### SSL сертификат
+
+```bash
+sudo certbot --nginx -d miniapp.yourdomain.com -d api.yourdomain.com
+```
+
+> **Примечание**: Если порты 80/443 заняты (например, VPN панелью), используйте альтернативные порты 9443/9444.
+
+---
+
+## ⚙️ White-Label: Настройка для бизнеса
+
+Для настройки под новый бизнес нужно отредактировать **2 файла**:
+
+### 1. Frontend: `src/config/shopConfig.ts`
 
 ```typescript
 export const shopConfig: ShopConfig = {
-  // === ОСНОВНЫЕ ===
-  appName: "Мой Салон Красоты",      // Название
-  businessType: "beauty_salon",       // barbershop | beauty_salon | spa | nail_studio
-  description: "Премиальные услуги",  // Описание
-  currency: "RUB",                    // Валюта
+  // === ОСНОВНЫЕ ДАННЫЕ ===
+  appName: "Студия красоты Элита",        // Название
+  businessType: "beauty_salon",            // barbershop | beauty_salon | spa | nail_studio
+  description: "Премиальные услуги",       // Описание
+  currency: "RUB",                         // Валюта
 
   // === АДМИНИСТРАТОРЫ ===
-  adminIds: [123456789],              // Telegram ID (узнать: @userinfobot)
+  // Telegram ID (узнать через @userinfobot)
+  adminIds: [123456789, 987654321],
 
   // === КОНТАКТЫ ===
   contacts: {
     phone: "+7 (999) 123-45-67",
-    address: "г. Москва, ул. Примерная, д. 1",
+    address: "г. Москва, ул. Примерная, 1",
     telegramChannel: "@yoursalon",
   },
 
   // === ОПЛАТА ===
   payment: {
     enabled: true,
-    providerToken: "381764678:TEST:...", // От BotFather
+    providerToken: "381764678:TEST:...",   // Токен из BotFather
     requirePrepayment: false,
   },
 
   // === БРЕНДИНГ ===
   branding: {
-    primaryColor: "#007AFF",
-    logoUrl: "/logo.png",
+    primaryColor: "#007AFF",               // Основной цвет
+    logoUrl: "/logo.png",                  // Логотип
     welcomeMessage: "Добро пожаловать!",
   },
 
-  // === API URL ===
-  apiUrl: "https://api.yourdomain.com/api",  // Ваш сервер
+  // === API URL (ВАЖНО!) ===
+  apiUrl: "https://api.yourdomain.com:9444/api",
 
   // === РАСПИСАНИЕ ПО УМОЛЧАНИЮ ===
   bookingDefaults: {
@@ -123,108 +200,37 @@ export const shopConfig: ShopConfig = {
 };
 ```
 
-После изменений Backend (`server/.env`):
-- `TELEGRAM_BOT_TOKEN` — токен бота
-- `ADMIN_IDS` — ID администраторов
-- `MINIAPP_URL` — URL MiniApp
-- `PAYMENT_PROVIDER_TOKEN` — токен платежей
+### 2. Backend: `server/.env`
 
----
+```env
+# Telegram бот
+TELEGRAM_BOT_TOKEN="токен_от_botfather"
 
-## 🖥 Деплой на VPS (Ubuntu + Nginx)
+# Администраторы (через запятую)
+ADMIN_IDS="123456789,987654321"
 
-> **Совместимость с 3x-ui:** Этот MiniApp будет работать на отдельных портах через Nginx, не конфликтуя с VPN панелью.
+# URL MiniApp (для кнопок в боте)
+MINIAPP_URL="https://miniapp.yourdomain.com:9443"
 
-### 1. Установка зависимостей на сервере
-
-```bash
-# Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# PM2 и Nginx
-sudo npm install -g pm2
-sudo apt install -y nginx certbot python3-certbot-nginx
+# Платежи YooKassa (опционально)
+YOOKASSA_SHOP_ID="your_shop_id"
+YOOKASSA_SECRET_KEY="your_secret_key"
+PAYMENT_PROVIDER_TOKEN="your_payment_token"
 ```
 
-### 2. Клонирование проекта
+### 3. Применить изменения
 
 ```bash
-cd /var/www
-git clone <URL_РЕПОЗИТОРИЯ> miniapps-business
-cd miniapps-business
-```
-
-### 3. Настройка переменных окружения
-
-```bash
-cp .env.example .env
-nano .env
-
-cd server
-cp .env.example .env
-nano .env
-```
-
-**Важно:** Обновите `apiUrl` в `src/config/shopConfig.ts`:
-```typescript
-apiUrl: "https://api.yourdomain.com/api"
-```
-
-### 4. Сборка
-
-```bash
-# Frontend
-cd /var/www/miniapps-business
-npm install
 npm run build
-
-# Backend
-cd server
-npm install
-npx prisma generate
-npx prisma db push
+pm2 restart all
 ```
-
-### 5. Настройка Nginx
-
-```bash
-sudo cp nginx.conf.example /etc/nginx/sites-available/miniapp
-sudo nano /etc/nginx/sites-available/miniapp
-# Замените YOUR_DOMAIN на ваш домен
-
-sudo ln -s /etc/nginx/sites-available/miniapp /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### 6. SSL сертификаты
-
-```bash
-sudo certbot --nginx -d miniapp.yourdomain.com -d api.yourdomain.com
-```
-
-### 7. Запуск через PM2
-
-```bash
-cd /var/www/miniapps-business
-pm2 start ecosystem.config.cjs
-pm2 save
-pm2 startup
-```
-
-### 8. Подключение к Telegram
-
-1. Откройте [@BotFather](https://t.me/BotFather)
-2. `/mybots` → выберите бота → **Bot Settings** → **Menu Button** → **Configure Menu Button**
-3. Отправьте URL: `https://miniapp.yourdomain.com`
 
 ---
 
 ## 🔄 Обновление на сервере
 
 ```bash
-cd /var/www/miniapps-business
+cd /var/www/tg-miniapp
 git pull
 npm install
 npm run build
@@ -234,38 +240,64 @@ pm2 restart all
 
 ---
 
-## ❓ FAQ
+## 📊 Мониторинг
 
-**В: Белый экран при открытии**
-О: Проверьте переменные окружения и консоль браузера (F12).
+```bash
+pm2 status           # Статус процессов
+pm2 logs             # Логи в реальном времени
+pm2 logs --lines 100 # Последние 100 строк
+pm2 monit            # Мониторинг CPU/RAM
+```
 
-**В: Нет доступа к админке**
-О: Добавьте ваш Telegram ID в `adminIds` в `shopConfig.ts` и `ADMIN_IDS` в `server/.env`.
+---
 
-**В: Конфликт с 3x-ui**
-О: Конфликта не будет — 3x-ui работает на своём порту (2053), MiniApp через Nginx на 80/443.
+## 🆘 Решение проблем
+
+| Проблема | Решение |
+|----------|---------|
+| Белый экран | Проверьте консоль браузера (F12), возможно неправильный `apiUrl` |
+| Нет доступа к админке | Добавьте свой Telegram ID в `adminIds` и `ADMIN_IDS` |
+| Услуги не отображаются | Проверьте что услуги привязаны к филиалам в админке |
+| 500 ошибка на сервере | Проверьте `pm2 logs` и путь в nginx (`root`) |
+| Конфликт с VPN (3x-ui) | Используйте порты 9443/9444 вместо 80/443 |
+| `EBADENGINE` при npm install | Обновите Node.js до версии 20+ |
 
 ---
 
 ## 📁 Структура проекта
 
 ```
-miniapps-business/
-├── src/                  # Frontend (React + Vite)
+tg-miniapp/
+├── src/
 │   ├── config/
-│   │   └── shopConfig.ts # ⭐ Главный файл настроек
+│   │   └── shopConfig.ts      # ⭐ Главный конфиг
 │   ├── components/
-│   └── ...
-├── server/               # Backend (Express + Prisma)
-│   ├── .env              # Переменные окружения сервера
+│   └── store/
+├── server/
+│   ├── .env                   # ⭐ Переменные сервера
 │   ├── prisma/
-│   │   └── schema.prisma # Схема БД
+│   │   └── dev.db             # SQLite база данных
 │   └── src/
-├── .env                  # Переменные окружения frontend
-├── ecosystem.config.cjs  # PM2 конфигурация
-└── nginx.conf.example    # Пример Nginx конфига
+├── dist/                      # Собранный frontend
+├── ecosystem.config.cjs       # PM2 конфигурация
+└── nginx.conf.example         # Пример Nginx конфига
 ```
 
 ---
 
-👨‍💻 **Разработано с любовью для бизнеса.**
+## 🚀 Чеклист для нового бизнеса
+
+- [ ] Создать Telegram бота через [@BotFather](https://t.me/BotFather)
+- [ ] Получить токен бота
+- [ ] Узнать свой Telegram ID через [@userinfobot](https://t.me/userinfobot)
+- [ ] Настроить домен/поддомен
+- [ ] Отредактировать `src/config/shopConfig.ts`
+- [ ] Отредактировать `server/.env`
+- [ ] Собрать и запустить (`npm run build`, `pm2 restart all`)
+- [ ] Настроить Menu Button в BotFather
+- [ ] Добавить услуги и мастеров через админку
+- [ ] Протестировать запись
+
+---
+
+👨‍💻 **Разработано для бизнеса в сфере красоты**

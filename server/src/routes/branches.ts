@@ -196,16 +196,36 @@ router.get('/:id/masters', async (req, res) => {
     }
 });
 
-// GET /api/branches/:id/services - get services for branch
+// GET /api/branches/:id/services - get services available in branch (derived from masters)
 router.get('/:id/services', async (req, res) => {
     const { id: branch_id } = req.params;
     console.log(`GET /api/branches/${branch_id}/services hit`);
     try {
-        const branchServices = await prisma.branchService.findMany({
+        // Get all masters assigned to this branch
+        const masterBranches = await prisma.masterBranch.findMany({
             where: { branch_id },
-            include: { service: true }
+            include: {
+                master: {
+                    include: {
+                        services: {
+                            include: { service: true }
+                        }
+                    }
+                }
+            }
         });
-        const services = branchServices.map(bs => bs.service);
+
+        // Collect unique services from all masters
+        const servicesMap = new Map();
+        masterBranches.forEach(mb => {
+            mb.master.services.forEach(ms => {
+                if (ms.service && ms.service.is_active) {
+                    servicesMap.set(ms.service.id, ms.service);
+                }
+            });
+        });
+
+        const services = Array.from(servicesMap.values());
         res.json(services);
     } catch (error: any) {
         console.error(`GET /api/branches/${branch_id}/services error:`, error);
