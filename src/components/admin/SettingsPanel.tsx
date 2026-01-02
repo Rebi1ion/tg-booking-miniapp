@@ -265,9 +265,39 @@ export const SettingsPanel = () => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                        Переменные: {'{name}'} — имя, {'{date}'} — дата, {'{time}'} — время, {'{service}'} — услуга, {'{master}'} — мастер, {'{price}'} — цена
-                    </p>
+                    {/* Variable explanation block */}
+                    <div className="bg-muted/50 rounded-lg p-3 border">
+                        <p className="text-sm font-medium mb-2">📝 Доступные переменные:</p>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                            <div className="flex items-center gap-2">
+                                <code className="bg-primary/10 px-1 rounded">{'{name}'}</code>
+                                <span className="text-muted-foreground">— Имя клиента</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <code className="bg-primary/10 px-1 rounded">{'{date}'}</code>
+                                <span className="text-muted-foreground">— Дата записи</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <code className="bg-primary/10 px-1 rounded">{'{time}'}</code>
+                                <span className="text-muted-foreground">— Время записи</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <code className="bg-primary/10 px-1 rounded">{'{service}'}</code>
+                                <span className="text-muted-foreground">— Название услуги</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <code className="bg-primary/10 px-1 rounded">{'{master}'}</code>
+                                <span className="text-muted-foreground">— Имя мастера</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <code className="bg-primary/10 px-1 rounded">{'{price}'}</code>
+                                <span className="text-muted-foreground">— Цена услуги</span>
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Вставьте переменную в текст — она автоматически заменится на реальные данные.
+                        </p>
+                    </div>
 
                     <div className="space-y-2">
                         <Label>Подтверждение записи</Label>
