@@ -40,8 +40,9 @@ export const notifyAdminsNewBooking = async (booking: any) => {
     const startTime = new Date(booking.start_time);
     const endTime = new Date(booking.end_time);
 
-    const dateStr = format(startTime, 'd MMMM yyyy', { locale: ru });
-    const timeStr = `${format(startTime, 'HH:mm')} — ${format(endTime, 'HH:mm')}`;
+    const tz = process.env.TIMEZONE || 'Europe/Moscow';
+    const dateStr = startTime.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: tz });
+    const timeStr = `${startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: tz })} — ${endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: tz })}`;
 
     const serviceName = booking.service?.name || 'Не указана';
     const servicePrice = booking.service?.price || 0;
@@ -113,6 +114,11 @@ const checkReminders = async () => {
 
     // Get message templates from settings
     const settings = await getSettings();
+    const tz = process.env.TIMEZONE || 'Europe/Moscow';
+
+    // Helper to format with timezone
+    const formatDate = (d: Date) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: tz });
+    const formatTime = (d: Date) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: tz });
 
     // 1. 24-hour Reminders
     const target24h = addDays(now, 1);
@@ -133,8 +139,8 @@ const checkReminders = async () => {
 
     for (const b of bookings24h) {
         if (b.user?.telegram_id) {
-            const dateStr = format(b.start_time, 'd MMMM', { locale: ru });
-            const timeStr = format(b.start_time, 'HH:mm');
+            const dateStr = formatDate(new Date(b.start_time));
+            const timeStr = formatTime(new Date(b.start_time));
 
             const text = substituteTemplateVars(settings.msg_reminder_24h, {
                 name: b.user.first_name || 'Гость',
@@ -171,8 +177,8 @@ const checkReminders = async () => {
 
     for (const b of bookings2h) {
         if (b.user?.telegram_id) {
-            const timeStr = format(b.start_time, 'HH:mm');
-            const dateStr = format(b.start_time, 'd MMMM', { locale: ru });
+            const timeStr = formatTime(new Date(b.start_time));
+            const dateStr = formatDate(new Date(b.start_time));
 
             const text = substituteTemplateVars(settings.msg_reminder_2h, {
                 name: b.user.first_name || 'Гость',
