@@ -48,11 +48,16 @@ export default function ReportGenerator({ apiUrl }: ReportGeneratorProps) {
                 throw new Error('Ошибка генерации отчёта');
             }
 
-            const blob = await response.blob();
+            // Get as arrayBuffer first, then create blob with correct type
+            const arrayBuffer = await response.arrayBuffer();
+            const blob = new Blob([arrayBuffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `bookings_${format(startDate, 'dd-MM-yyyy')}_${format(endDate, 'dd-MM-yyyy')}.xlsx`;
+            a.download = `bookings_${format(startDate, 'dd_MM_yyyy')}_${format(endDate, 'dd_MM_yyyy')}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
