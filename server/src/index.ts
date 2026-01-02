@@ -26,6 +26,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy - required when behind nginx/reverse proxy
+// This fixes express-rate-limit X-Forwarded-For header issue
+app.set('trust proxy', 1);
+
 // Rate limiting - protect from DDoS
 const limiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
