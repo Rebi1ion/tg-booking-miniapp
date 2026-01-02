@@ -32,19 +32,52 @@ router.get('/', async (req, res) => {
 
 // PUT /api/settings - update settings
 router.put('/', async (req, res) => {
-    const { birthday_discount, birthday_message, birthday_promo_days, require_prepayment, banned_users } = req.body;
+    const {
+        birthday_enabled,
+        birthday_discount,
+        birthday_message,
+        birthday_promo_days,
+        require_prepayment,
+        banned_users,
+        msg_booking_confirmed,
+        msg_reminder_24h,
+        msg_reminder_2h,
+        msg_payment_success
+    } = req.body;
     console.log("PUT /api/settings hit:", req.body);
     try {
-        const updateData: any = {
-            birthday_discount: parseInt(birthday_discount) || 10,
-            birthday_message: birthday_message || '🎂 С днём рождения! Дарим вам скидку {discount}%!',
-            birthday_promo_days: parseInt(birthday_promo_days) || 7,
-            require_prepayment: require_prepayment === true || require_prepayment === 'true'
-        };
+        const updateData: any = {};
 
-        // Handle banned_users if provided
+        // Handle all fields - only set if provided
+        if (birthday_enabled !== undefined) {
+            updateData.birthday_enabled = birthday_enabled === true || birthday_enabled === 'true';
+        }
+        if (birthday_discount !== undefined) {
+            updateData.birthday_discount = parseInt(birthday_discount) || 10;
+        }
+        if (birthday_message !== undefined) {
+            updateData.birthday_message = birthday_message;
+        }
+        if (birthday_promo_days !== undefined) {
+            updateData.birthday_promo_days = parseInt(birthday_promo_days) || 7;
+        }
+        if (require_prepayment !== undefined) {
+            updateData.require_prepayment = require_prepayment === true || require_prepayment === 'true';
+        }
         if (banned_users !== undefined) {
             updateData.banned_users = typeof banned_users === 'string' ? banned_users : JSON.stringify(banned_users);
+        }
+        if (msg_booking_confirmed !== undefined) {
+            updateData.msg_booking_confirmed = msg_booking_confirmed;
+        }
+        if (msg_reminder_24h !== undefined) {
+            updateData.msg_reminder_24h = msg_reminder_24h;
+        }
+        if (msg_reminder_2h !== undefined) {
+            updateData.msg_reminder_2h = msg_reminder_2h;
+        }
+        if (msg_payment_success !== undefined) {
+            updateData.msg_payment_success = msg_payment_success;
         }
 
         const settings = await prisma.settings.upsert({
@@ -52,6 +85,9 @@ router.put('/', async (req, res) => {
             update: updateData,
             create: {
                 id: 'main',
+                birthday_discount: 10,
+                birthday_message: '🎂 С днём рождения! Дарим вам скидку {discount}%!',
+                birthday_promo_days: 7,
                 ...updateData
             }
         });

@@ -146,10 +146,17 @@ model PromoUsage {
 
 model Settings {
   id                   String  @id @default("main")
+  birthday_enabled     Boolean @default(true)
   birthday_discount    Int     @default(10)      // % discount
   birthday_message     String  @default("🎂 С днём рождения! Дарим вам скидку {discount}%!")
   birthday_promo_days  Int     @default(7)       // Days the promo is valid
   require_prepayment   Boolean @default(false)   // Require payment before booking is created
   banned_users         String  @default("[]")    // JSON array of banned telegram IDs
+  
+  // Message templates (use {name}, {date}, {time}, {service}, {master}, {price})
+  msg_booking_confirmed String @default("✅ Вы записаны!\n\n📅 Дата: {date}\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nЖдём вас!")
+  msg_reminder_24h      String @default("🔔 Напоминание о записи!\n\nДо вашей встречи остался 1 день.\n\n📅 Дата: {date}\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nЖдём вас!")
+  msg_reminder_2h       String @default("🔔 Вы записаны через 2 часа!\n\nЖдем вас совсем скоро!\n\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nДо встречи!")
+  msg_payment_success   String @default("✅ Оплата прошла успешно!\n\nВаша запись подтверждена.\n📅 Дата: {date}\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n💰 Оплачено: {price} ₽")
 }
 

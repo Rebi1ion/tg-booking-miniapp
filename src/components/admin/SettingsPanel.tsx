@@ -4,18 +4,23 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard, Ban, X } from 'lucide-react';
+import { Loader2, CreditCard, Ban, X, Gift, MessageSquare, Save } from 'lucide-react';
 import { shopConfig } from '@/config/shopConfig';
 
 const API_URL = shopConfig.apiUrl;
 
 interface Settings {
     id: string;
+    birthday_enabled: boolean;
     birthday_discount: number;
     birthday_message: string;
     birthday_promo_days: number;
     require_prepayment: boolean;
     banned_users: string;
+    msg_booking_confirmed: string;
+    msg_reminder_24h: string;
+    msg_reminder_2h: string;
+    msg_payment_success: string;
 }
 
 export const SettingsPanel = () => {
@@ -76,6 +81,26 @@ export const SettingsPanel = () => {
         }
     };
 
+    const saveAllSettings = async () => {
+        if (!settings) return;
+        setSaving(true);
+        try {
+            const res = await fetch(`${API_URL}/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
+                },
+                body: JSON.stringify(settings)
+            });
+            if (!res.ok) throw new Error('Failed to save settings');
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const banUser = async () => {
         if (!banInput.trim()) return;
         setSaving(true);
@@ -130,6 +155,7 @@ export const SettingsPanel = () => {
 
     return (
         <div className="space-y-4">
+            {/* Payment Settings */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -157,6 +183,136 @@ export const SettingsPanel = () => {
                 </CardContent>
             </Card>
 
+            {/* Birthday Settings */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Gift className="h-5 w-5" />
+                        Скидки ко дню рождения
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="birthday_enabled" className="text-base font-medium">
+                                Включить скидки
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                                Автоматически отправлять промокод на день рождения
+                            </p>
+                        </div>
+                        <Switch
+                            id="birthday_enabled"
+                            checked={settings?.birthday_enabled ?? true}
+                            onCheckedChange={(checked) => updateSetting('birthday_enabled', checked)}
+                            disabled={saving}
+                        />
+                    </div>
+
+                    {settings?.birthday_enabled && (
+                        <>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="birthday_discount">Размер скидки (%)</Label>
+                                    <Input
+                                        id="birthday_discount"
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value={settings?.birthday_discount || 10}
+                                        onChange={(e) => setSettings(s => s ? { ...s, birthday_discount: parseInt(e.target.value) || 10 } : s)}
+                                        onBlur={() => updateSetting('birthday_discount', settings?.birthday_discount)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="birthday_promo_days">Срок действия (дней)</Label>
+                                    <Input
+                                        id="birthday_promo_days"
+                                        type="number"
+                                        min="1"
+                                        max="30"
+                                        value={settings?.birthday_promo_days || 7}
+                                        onChange={(e) => setSettings(s => s ? { ...s, birthday_promo_days: parseInt(e.target.value) || 7 } : s)}
+                                        onBlur={() => updateSetting('birthday_promo_days', settings?.birthday_promo_days)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="birthday_message">Текст поздравления</Label>
+                                <textarea
+                                    id="birthday_message"
+                                    className="w-full min-h-[100px] p-3 rounded-md border bg-background text-sm resize-none"
+                                    value={settings?.birthday_message || ''}
+                                    onChange={(e) => setSettings(s => s ? { ...s, birthday_message: e.target.value } : s)}
+                                    onBlur={() => updateSetting('birthday_message', settings?.birthday_message)}
+                                    placeholder="Используйте {discount} для подстановки размера скидки"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Переменные: {'{discount}'} — размер скидки, {'{name}'} — имя клиента
+                                </p>
+                            </div>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Message Templates */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5" />
+                        Шаблоны сообщений
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        Переменные: {'{name}'} — имя, {'{date}'} — дата, {'{time}'} — время, {'{service}'} — услуга, {'{master}'} — мастер, {'{price}'} — цена
+                    </p>
+
+                    <div className="space-y-2">
+                        <Label>Подтверждение записи</Label>
+                        <textarea
+                            className="w-full min-h-[80px] p-3 rounded-md border bg-background text-sm resize-none"
+                            value={settings?.msg_booking_confirmed || ''}
+                            onChange={(e) => setSettings(s => s ? { ...s, msg_booking_confirmed: e.target.value } : s)}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Напоминание (за 24 часа)</Label>
+                        <textarea
+                            className="w-full min-h-[80px] p-3 rounded-md border bg-background text-sm resize-none"
+                            value={settings?.msg_reminder_24h || ''}
+                            onChange={(e) => setSettings(s => s ? { ...s, msg_reminder_24h: e.target.value } : s)}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Напоминание (за 2 часа)</Label>
+                        <textarea
+                            className="w-full min-h-[80px] p-3 rounded-md border bg-background text-sm resize-none"
+                            value={settings?.msg_reminder_2h || ''}
+                            onChange={(e) => setSettings(s => s ? { ...s, msg_reminder_2h: e.target.value } : s)}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Успешная оплата</Label>
+                        <textarea
+                            className="w-full min-h-[80px] p-3 rounded-md border bg-background text-sm resize-none"
+                            value={settings?.msg_payment_success || ''}
+                            onChange={(e) => setSettings(s => s ? { ...s, msg_payment_success: e.target.value } : s)}
+                        />
+                    </div>
+
+                    <Button onClick={saveAllSettings} disabled={saving} className="w-full">
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                        Сохранить шаблоны
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {/* Ban Users */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">

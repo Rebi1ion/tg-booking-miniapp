@@ -70,10 +70,49 @@ ${status}`;
     }
 };
 
+// Helper function to substitute variables in message templates
+const substituteTemplateVars = (
+    template: string,
+    vars: { name?: string; date?: string; time?: string; service?: string; master?: string; price?: string | number }
+): string => {
+    let result = template;
+    if (vars.name) result = result.replace(/{name}/g, vars.name);
+    if (vars.date) result = result.replace(/{date}/g, vars.date);
+    if (vars.time) result = result.replace(/{time}/g, vars.time);
+    if (vars.service) result = result.replace(/{service}/g, vars.service);
+    if (vars.master) result = result.replace(/{master}/g, vars.master);
+    if (vars.price !== undefined) result = result.replace(/{price}/g, vars.price.toString());
+    return result;
+};
+
+// Get settings for message templates
+const getSettings = async () => {
+    let settings = await prisma.settings.findUnique({ where: { id: 'main' } });
+    if (!settings) {
+        settings = {
+            id: 'main',
+            birthday_enabled: true,
+            birthday_discount: 10,
+            birthday_message: '🎂 С днём рождения! Дарим вам скидку {discount}%!',
+            birthday_promo_days: 7,
+            require_prepayment: false,
+            banned_users: '[]',
+            msg_booking_confirmed: '✅ Вы записаны!\n\n📅 Дата: {date}\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nЖдём вас!',
+            msg_reminder_24h: '🔔 Напоминание о записи!\n\nДо вашей встречи остался 1 день.\n\n📅 Дата: {date}\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nЖдём вас!',
+            msg_reminder_2h: '🔔 Вы записаны через 2 часа!\n\nЖдем вас совсем скоро!\n\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nДо встречи!',
+            msg_payment_success: '✅ Оплата прошла успешно!\n\nВаша запись подтверждена.\n📅 Дата: {date}\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n💰 Оплачено: {price} ₽'
+        };
+    }
+    return settings;
+};
+
 // Reminder logic
 const checkReminders = async () => {
     const now = new Date();
     console.log(`[${format(now, 'HH:mm:ss')}] Running reminder check...`);
+
+    // Get message templates from settings
+    const settings = await getSettings();
 
     // 1. 24-hour Reminders
     const target24h = addDays(now, 1);
@@ -96,16 +135,16 @@ const checkReminders = async () => {
         if (b.user?.telegram_id) {
             const dateStr = format(b.start_time, 'd MMMM', { locale: ru });
             const timeStr = format(b.start_time, 'HH:mm');
-            const text = `🔔 <b>Напоминание о записи!</b>
 
-До вашей встречи остался 1 день.
+            const text = substituteTemplateVars(settings.msg_reminder_24h, {
+                name: b.user.first_name || 'Гость',
+                date: dateStr,
+                time: timeStr,
+                service: b.service?.name || 'Услуга',
+                master: b.master?.name || 'Мастер',
+                price: b.service?.price || 0
+            });
 
-📅 Дата: ${dateStr}
-⏰ Время: ${timeStr}
-👤 Мастер: ${b.master?.name}
-⭐ Услуга: ${b.service?.name}
-
-Ждём вас!`;
             const sent = await sendTelegramMessage(Number(b.user.telegram_id), text);
             if (sent) {
                 await prisma.booking.update({ where: { id: b.id }, data: { reminder_24h_sent: true } });
@@ -113,7 +152,7 @@ const checkReminders = async () => {
         }
     }
 
-    // 2. 2-hour Reminders (changed from 1 hour)
+    // 2. 2-hour Reminders
     const target2h = addHours(now, 2);
     const bookings2h = await prisma.booking.findMany({
         where: {
@@ -121,7 +160,7 @@ const checkReminders = async () => {
                 gte: subMinutes(target2h, 15),
                 lte: addMinutes(target2h, 15)
             },
-            reminder_1h_sent: false, // Using same field, renamed logically
+            reminder_1h_sent: false,
             status: { not: 'cancelled' },
             user: { isNot: null }
         },
@@ -133,15 +172,17 @@ const checkReminders = async () => {
     for (const b of bookings2h) {
         if (b.user?.telegram_id) {
             const timeStr = format(b.start_time, 'HH:mm');
-            const text = `🔔 <b>Вы записаны через 2 часа!</b>
+            const dateStr = format(b.start_time, 'd MMMM', { locale: ru });
 
-Ждем вас совсем скоро!
+            const text = substituteTemplateVars(settings.msg_reminder_2h, {
+                name: b.user.first_name || 'Гость',
+                date: dateStr,
+                time: timeStr,
+                service: b.service?.name || 'Услуга',
+                master: b.master?.name || 'Мастер',
+                price: b.service?.price || 0
+            });
 
-⏰ Время: ${timeStr}
-👤 Мастер: ${b.master?.name}
-⭐ Услуга: ${b.service?.name}
-
-До встречи!`;
             const sent = await sendTelegramMessage(Number(b.user.telegram_id), text);
             if (sent) {
                 await prisma.booking.update({ where: { id: b.id }, data: { reminder_1h_sent: true } });
@@ -149,6 +190,9 @@ const checkReminders = async () => {
         }
     }
 };
+
+// Export for use in other services
+export { substituteTemplateVars, getSettings };
 
 // Test function - send test notification to specific user
 export const sendTestReminder = async (userId: string | number, type: '24h' | '2h' | 'admin') => {
@@ -216,9 +260,12 @@ const checkBirthdays = async () => {
         const day = today.getDate();
 
         // Get settings
-        let settings = await prisma.settings.findUnique({ where: { id: 'main' } });
-        if (!settings) {
-            settings = { id: 'main', birthday_discount: 10, birthday_message: '🎂 С днём рождения! Дарим вам скидку {discount}%!', birthday_promo_days: 7, require_prepayment: false, banned_users: '[]' };
+        const settings = await getSettings();
+
+        // Check if birthday feature is enabled
+        if (!settings.birthday_enabled) {
+            console.log('Birthday discounts are disabled');
+            return;
         }
 
         // Find users with birthday today
