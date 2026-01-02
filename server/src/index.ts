@@ -37,6 +37,7 @@ const limiter = rateLimit({
     message: { error: 'Too many requests, please try again later' },
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false, // Disable validation to avoid X-Forwarded-For errors
 });
 
 app.use(limiter);
