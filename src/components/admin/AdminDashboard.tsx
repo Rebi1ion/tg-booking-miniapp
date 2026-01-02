@@ -80,7 +80,7 @@ export const AdminDashboard = () => {
                 </TabsContent>
 
                 <TabsContent value="reports">
-                    <ReportGenerator apiUrl={shopConfig.apiUrl.replace('/api', '')} />
+                    <ReportGenerator apiUrl={shopConfig.apiUrl} />
                 </TabsContent>
 
                 <TabsContent value="settings">
