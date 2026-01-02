@@ -194,9 +194,12 @@ router.get('/bookings', async (req: Request, res: Response) => {
         // Write to buffer
         const buffer = await workbook.xlsx.writeBuffer();
 
-        // Set response headers
+        // Set response headers - prevent caching
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
 
         // Send buffer directly
         res.send(Buffer.from(buffer));
