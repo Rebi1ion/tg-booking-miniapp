@@ -32,8 +32,8 @@ export default function ReportGenerator({ apiUrl }: ReportGeneratorProps) {
         setIsLoading(true);
 
         try {
-            const startStr = startDate.toISOString().split('T')[0];
-            const endStr = endDate.toISOString().split('T')[0];
+            const startStr = format(startDate, 'yyyy-MM-dd');
+            const endStr = format(endDate, 'yyyy-MM-dd');
 
             const response = await fetch(
                 `${apiUrl}/reports/bookings?startDate=${startStr}&endDate=${endStr}`,
