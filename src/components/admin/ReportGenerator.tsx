@@ -36,7 +36,7 @@ export default function ReportGenerator({ apiUrl }: ReportGeneratorProps) {
             const endStr = endDate.toISOString().split('T')[0];
 
             const response = await fetch(
-                `${apiUrl}/api/reports/bookings?startDate=${startStr}&endDate=${endStr}`,
+                `${apiUrl}/reports/bookings?startDate=${startStr}&endDate=${endStr}`,
                 {
                     headers: {
                         'ngrok-skip-browser-warning': 'true'
