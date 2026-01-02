@@ -305,18 +305,24 @@ router.get('/bookings', async (req, res) => {
             });
         });
 
-        // Generate filename
-        const startStr = start.toLocaleDateString('ru-RU', { timeZone: TIMEZONE }).replace(/\./g, '-');
-        const endStr = end.toLocaleDateString('ru-RU', { timeZone: TIMEZONE }).replace(/\./g, '-');
-        const filename = `bookings_${startStr}_${endStr}.xlsx`;
+        // Generate filename with underscores (safer for all systems)
+        const formatDate = (d: Date) => {
+            const day = d.getDate().toString().padStart(2, '0');
+            const month = (d.getMonth() + 1).toString().padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}_${month}_${year}`;
+        };
+        const filename = `bookings_${formatDate(start)}_${formatDate(end)}.xlsx`;
+
+        // Write to buffer first (more reliable than streaming)
+        const buffer = await workbook.xlsx.writeBuffer();
 
         // Set response headers
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-        // Write to response
-        await workbook.xlsx.write(res);
-        res.end();
+        // Send buffer
+        res.send(Buffer.from(buffer));
 
     } catch (error: any) {
         console.error("Report generation error:", error);

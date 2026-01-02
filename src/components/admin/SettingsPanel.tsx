@@ -266,36 +266,36 @@ export const SettingsPanel = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {/* Variable explanation block */}
-                    <div className="bg-muted/50 rounded-lg p-3 border">
-                        <p className="text-sm font-medium mb-2">📝 Доступные переменные:</p>
-                        <div className="grid grid-cols-2 gap-1 text-xs">
-                            <div className="flex items-center gap-2">
-                                <code className="bg-primary/10 px-1 rounded">{'{name}'}</code>
-                                <span className="text-muted-foreground">— Имя клиента</span>
+                    <div className="bg-muted/50 rounded-lg p-3 border text-xs">
+                        <p className="font-medium mb-2">📝 Доступные переменные:</p>
+                        <div className="space-y-1">
+                            <div className="flex justify-between">
+                                <code className="bg-primary/10 px-1.5 py-0.5 rounded font-mono">{'{name}'}</code>
+                                <span className="text-muted-foreground">Имя клиента</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <code className="bg-primary/10 px-1 rounded">{'{date}'}</code>
-                                <span className="text-muted-foreground">— Дата записи</span>
+                            <div className="flex justify-between">
+                                <code className="bg-primary/10 px-1.5 py-0.5 rounded font-mono">{'{date}'}</code>
+                                <span className="text-muted-foreground">Дата записи</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <code className="bg-primary/10 px-1 rounded">{'{time}'}</code>
-                                <span className="text-muted-foreground">— Время записи</span>
+                            <div className="flex justify-between">
+                                <code className="bg-primary/10 px-1.5 py-0.5 rounded font-mono">{'{time}'}</code>
+                                <span className="text-muted-foreground">Время записи</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <code className="bg-primary/10 px-1 rounded">{'{service}'}</code>
-                                <span className="text-muted-foreground">— Название услуги</span>
+                            <div className="flex justify-between">
+                                <code className="bg-primary/10 px-1.5 py-0.5 rounded font-mono">{'{service}'}</code>
+                                <span className="text-muted-foreground">Услуга</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <code className="bg-primary/10 px-1 rounded">{'{master}'}</code>
-                                <span className="text-muted-foreground">— Имя мастера</span>
+                            <div className="flex justify-between">
+                                <code className="bg-primary/10 px-1.5 py-0.5 rounded font-mono">{'{master}'}</code>
+                                <span className="text-muted-foreground">Мастер</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <code className="bg-primary/10 px-1 rounded">{'{price}'}</code>
-                                <span className="text-muted-foreground">— Цена услуги</span>
+                            <div className="flex justify-between">
+                                <code className="bg-primary/10 px-1.5 py-0.5 rounded font-mono">{'{price}'}</code>
+                                <span className="text-muted-foreground">Цена</span>
                             </div>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            Вставьте переменную в текст — она автоматически заменится на реальные данные.
+                        <p className="text-muted-foreground mt-2 text-[11px]">
+                            Вставьте переменную в шаблон — она заменится на реальные данные.
                         </p>
                     </div>
 
