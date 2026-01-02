@@ -271,7 +271,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     },
 
     submitBooking: async (customPrice?: number, promoId?: string) => {
-        const { selectedService, selectedMaster, selectedDate, selectedTimeSlot, user } = get();
+        const { selectedService, selectedMaster, selectedDate, selectedTimeSlot, user, selectedBranch } = get();
         if (!selectedService || !selectedMaster || !selectedDate || !selectedTimeSlot) {
             return { success: false, error: "Incomplete selection" };
         }
@@ -296,6 +296,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                     user_id: user?.id,
                     service_id: selectedService.id,
                     master_id: selectedMaster.id,
+                    branch_id: selectedBranch?.id || null,
                     start_time: startTime.toISOString(),
                     end_time: endTime.toISOString(),
                     status: 'pending', // Will be updated to 'paid' after successful payment

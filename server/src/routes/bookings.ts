@@ -80,7 +80,7 @@ router.get('/user/:telegram_id', async (req, res) => {
 
 // POST /api/bookings
 router.post('/', async (req, res) => {
-    const { user_id, service_id, master_id, start_time, end_time, status, payment_id, client_name, client_phone, send_invoice, custom_price, promo_id } = req.body;
+    const { user_id, service_id, master_id, branch_id, start_time, end_time, status, payment_id, client_name, client_phone, send_invoice, custom_price, promo_id } = req.body;
 
     try {
         // Check if user is banned (only for client bookings)
@@ -159,6 +159,7 @@ router.post('/', async (req, res) => {
                 user_id,
                 service_id,
                 master_id,
+                branch_id,
                 start_time: new Date(start_time),
                 end_time: new Date(end_time),
                 status,
