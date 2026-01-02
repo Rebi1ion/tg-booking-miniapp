@@ -132,6 +132,7 @@ export const createPrepaymentInvoice = async (
         user_id: string;
         service_id: string;
         master_id: string;
+        branch_id?: string;
         start_time: string;
         end_time: string;
         client_name: string;
@@ -175,6 +176,7 @@ export const createPrepaymentInvoice = async (
                 user_id: bookingData.user_id,
                 service_id: bookingData.service_id,
                 master_id: bookingData.master_id,
+                branch_id: bookingData.branch_id,
                 start_time: new Date(bookingData.start_time),
                 end_time: new Date(bookingData.end_time),
                 status: 'pending_prepayment', // Special status - not visible to admins until paid

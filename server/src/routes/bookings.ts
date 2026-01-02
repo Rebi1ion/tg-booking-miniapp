@@ -116,6 +116,7 @@ router.post('/', async (req, res) => {
                         user_id,
                         service_id,
                         master_id,
+                        branch_id,
                         start_time,
                         end_time,
                         client_name: client_name || user.first_name || 'Клиент',
