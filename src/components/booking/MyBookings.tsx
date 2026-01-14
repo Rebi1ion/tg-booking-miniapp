@@ -32,7 +32,7 @@ export const MyBookings = () => {
                 headers: { 'ngrok-skip-browser-warning': 'true' }
             });
             if (res.ok) {
-                alert('✅ Счёт на оплату отправлен в чат бота!');
+                alert('✅ Новый счёт отправлен в чат бота! Используйте его для оплаты.');
             } else {
                 const data = await res.json();
                 alert(data.error || 'Ошибка при отправке счёта');
@@ -103,7 +103,7 @@ export const MyBookings = () => {
                             ) : (
                                 <CreditCard className="h-4 w-4 mr-2" />
                             )}
-                            Оплатить
+                            Получить новый счёт
                         </Button>
                     )}
                 </CardContent>
