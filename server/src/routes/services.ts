@@ -38,6 +38,54 @@ router.post('/', async (req, res) => {
     }
 });
 
+// GET /api/services/personalized/:userId - services sorted by user's order frequency
+// IMPORTANT: This route must be before /:id routes to prevent Express from matching "personalized" as an id
+router.get('/personalized/:userId', async (req, res) => {
+    const { userId } = req.params;
+    console.log(`GET /api/services/personalized/${userId} hit`);
+    try {
+        // Get all active services
+        const services = await prisma.service.findMany({
+            where: { is_active: true },
+            orderBy: { category: 'asc' }
+        });
+
+        // Count bookings per service for this user
+        const bookingCounts = await prisma.booking.groupBy({
+            by: ['service_id'],
+            where: {
+                user_id: userId,
+                status: { not: 'cancelled' }
+            },
+            _count: { service_id: true }
+        });
+
+        // Create a map for quick lookup
+        const countMap = new Map(
+            bookingCounts.map(c => [c.service_id, c._count.service_id])
+        );
+
+        // Merge counts into services
+        const servicesWithCounts = services.map(s => ({
+            ...s,
+            order_count: countMap.get(s.id) || 0
+        }));
+
+        // Sort: first by order_count descending, then by category
+        servicesWithCounts.sort((a, b) => {
+            if (b.order_count !== a.order_count) {
+                return b.order_count - a.order_count;
+            }
+            return (a.category || '').localeCompare(b.category || '');
+        });
+
+        res.json(servicesWithCounts);
+    } catch (error: any) {
+        console.error(`GET /api/services/personalized error:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // PUT /api/services/:id
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
@@ -93,51 +141,5 @@ router.patch('/:id', async (req, res) => {
     }
 });
 
-// GET /api/services/personalized/:userId - services sorted by user's order frequency
-router.get('/personalized/:userId', async (req, res) => {
-    const { userId } = req.params;
-    console.log(`GET /api/services/personalized/${userId} hit`);
-    try {
-        // Get all active services
-        const services = await prisma.service.findMany({
-            where: { is_active: true },
-            orderBy: { category: 'asc' }
-        });
-
-        // Count bookings per service for this user
-        const bookingCounts = await prisma.booking.groupBy({
-            by: ['service_id'],
-            where: {
-                user_id: userId,
-                status: { not: 'cancelled' }
-            },
-            _count: { service_id: true }
-        });
-
-        // Create a map for quick lookup
-        const countMap = new Map(
-            bookingCounts.map(c => [c.service_id, c._count.service_id])
-        );
-
-        // Merge counts into services
-        const servicesWithCounts = services.map(s => ({
-            ...s,
-            order_count: countMap.get(s.id) || 0
-        }));
-
-        // Sort: first by order_count descending, then by category
-        servicesWithCounts.sort((a, b) => {
-            if (b.order_count !== a.order_count) {
-                return b.order_count - a.order_count;
-            }
-            return (a.category || '').localeCompare(b.category || '');
-        });
-
-        res.json(servicesWithCounts);
-    } catch (error: any) {
-        console.error(`GET /api/services/personalized error:`, error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 export default router;
+
