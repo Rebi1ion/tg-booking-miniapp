@@ -50,15 +50,17 @@ router.get('/personalized/:userId', async (req, res) => {
             orderBy: { category: 'asc' }
         });
 
-        // Count bookings per service for this user
+        // Count bookings per service for this user (only paid or completed bookings)
         const bookingCounts = await prisma.booking.groupBy({
             by: ['service_id'],
             where: {
                 user_id: userId,
-                status: { not: 'cancelled' }
+                status: { in: ['paid', 'completed'] }  // Only count actual completed orders
             },
             _count: { service_id: true }
         });
+
+        console.log(`Personalized: found ${bookingCounts.length} service groups with paid bookings for user`);
 
         // Create a map for quick lookup
         const countMap = new Map(
