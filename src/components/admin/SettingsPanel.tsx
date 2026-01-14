@@ -217,24 +217,42 @@ export const SettingsPanel = () => {
                                     <Label htmlFor="birthday_discount">Размер скидки (%)</Label>
                                     <Input
                                         id="birthday_discount"
-                                        type="number"
-                                        min="1"
-                                        max="100"
-                                        value={settings?.birthday_discount || 10}
-                                        onChange={(e) => setSettings(s => s ? { ...s, birthday_discount: parseInt(e.target.value) || 10 } : s)}
-                                        onBlur={() => updateSetting('birthday_discount', settings?.birthday_discount)}
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="10"
+                                        value={settings?.birthday_discount ?? ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '' || /^\d+$/.test(val)) {
+                                                setSettings(s => s ? { ...s, birthday_discount: val === '' ? 0 : parseInt(val) } : s);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            const val = settings?.birthday_discount || 10;
+                                            setSettings(s => s ? { ...s, birthday_discount: Math.min(100, Math.max(1, val)) } : s);
+                                            updateSetting('birthday_discount', Math.min(100, Math.max(1, val)));
+                                        }}
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="birthday_promo_days">Срок действия (дней)</Label>
                                     <Input
                                         id="birthday_promo_days"
-                                        type="number"
-                                        min="1"
-                                        max="30"
-                                        value={settings?.birthday_promo_days || 7}
-                                        onChange={(e) => setSettings(s => s ? { ...s, birthday_promo_days: parseInt(e.target.value) || 7 } : s)}
-                                        onBlur={() => updateSetting('birthday_promo_days', settings?.birthday_promo_days)}
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="7"
+                                        value={settings?.birthday_promo_days ?? ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '' || /^\d+$/.test(val)) {
+                                                setSettings(s => s ? { ...s, birthday_promo_days: val === '' ? 0 : parseInt(val) } : s);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            const val = settings?.birthday_promo_days || 7;
+                                            setSettings(s => s ? { ...s, birthday_promo_days: Math.min(365, Math.max(1, val)) } : s);
+                                            updateSetting('birthday_promo_days', Math.min(365, Math.max(1, val)));
+                                        }}
                                     />
                                 </div>
                             </div>
