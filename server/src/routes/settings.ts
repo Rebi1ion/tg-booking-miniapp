@@ -39,6 +39,7 @@ router.put('/', async (req, res) => {
         birthday_promo_days,
         require_prepayment,
         banned_users,
+        welcome_message,
         msg_booking_confirmed,
         msg_reminder_24h,
         msg_reminder_2h,
@@ -66,6 +67,9 @@ router.put('/', async (req, res) => {
         }
         if (banned_users !== undefined) {
             updateData.banned_users = typeof banned_users === 'string' ? banned_users : JSON.stringify(banned_users);
+        }
+        if (welcome_message !== undefined) {
+            updateData.welcome_message = welcome_message;
         }
         if (msg_booking_confirmed !== undefined) {
             updateData.msg_booking_confirmed = msg_booking_confirmed;

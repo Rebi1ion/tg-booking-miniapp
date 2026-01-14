@@ -308,9 +308,6 @@ export const SettingsPanel = () => {
                             onChange={(e) => setSettings(s => s ? { ...s, welcome_message: e.target.value } : s)}
                             placeholder="Приветственное сообщение для новых пользователей"
                         />
-                        <p className="text-xs text-muted-foreground">
-                            Доступная переменная: {'{name}'} — имя пользователя
-                        </p>
                     </div>
 
                     <div className="space-y-2">
