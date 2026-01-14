@@ -88,6 +88,17 @@ if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
         // Set dynamic Menu Button based on user role
         await setMenuButton(userId, role);
 
+        // Fetch settings for welcome message
+        let welcomeMessage = '';
+        try {
+            const settings = await prisma.settings.findUnique({ where: { id: 'main' } });
+            if (settings?.welcome_message) {
+                welcomeMessage = settings.welcome_message.replace(/{name}/g, userName);
+            }
+        } catch (err) {
+            console.error('Failed to fetch welcome message:', err);
+        }
+
         if (isUserAdmin) {
             await ctx.reply(
                 `👑 <b>Добро пожаловать, ${userName}!</b>\n\n` +
@@ -108,14 +119,15 @@ if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
                 { parse_mode: 'HTML', ...masterKeyboard }
             );
         } else {
-            await ctx.reply(
+            // Use custom welcome message from settings or default
+            const messageText = welcomeMessage ||
                 `👋 <b>Добро пожаловать, ${userName}!</b>\n\n` +
                 `🎉 Мы рады видеть вас в нашем сервисе бронирования!\n\n` +
                 `📱 Нажмите кнопку <b>меню</b> (слева от поля ввода) чтобы записаться.\n` +
                 `📋 Нажмите "Мои записи" чтобы посмотреть ваши бронирования.\n\n` +
-                `✨ Быстро, удобно, в любое время!`,
-                { parse_mode: 'HTML', ...userKeyboard }
-            );
+                `✨ Быстро, удобно, в любое время!`;
+
+            await ctx.reply(messageText, { parse_mode: 'HTML', ...userKeyboard });
         }
 
         // Save/update user in database

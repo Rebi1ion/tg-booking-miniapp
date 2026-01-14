@@ -121,7 +121,7 @@ export const createBookingInvoice = async (bookingId: string, customPrice?: numb
         if (customPrice !== undefined && booking.service?.price && customPrice < booking.service.price) {
             description += `\n🏷️ Скидка применена!`;
         }
-        description += `\n\n⚠️ При ошибке оплаты — запросите новый счёт в мини-аппе`;
+        description += `\n\n\n⚠️ При ошибке оплаты —\nзапросите новый счёт в мини-аппе`;
 
         return await createPaymentInvoice({
             bookingId: booking.id,
@@ -191,7 +191,7 @@ export const createPrepaymentInvoice = async (
         if (bookingData.custom_price !== undefined && bookingData.custom_price < serviceInfo.price) {
             description += `\n🏷️ Скидка применена!`;
         }
-        description += `\n\n⚠️ При ошибке оплаты — запросите новый счёт в мини-аппе`;
+        description += `\n\n\n⚠️ При ошибке оплаты —\nзапросите новый счёт в мини-аппе`;
 
         // First create booking with special status "pending_prepayment"
         // This will be updated to "paid" after successful payment

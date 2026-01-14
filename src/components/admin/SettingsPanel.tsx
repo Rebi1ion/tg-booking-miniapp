@@ -17,6 +17,7 @@ interface Settings {
     birthday_promo_days: number;
     require_prepayment: boolean;
     banned_users: string;
+    welcome_message: string;
     msg_booking_confirmed: string;
     msg_reminder_24h: string;
     msg_reminder_2h: string;
@@ -296,6 +297,19 @@ export const SettingsPanel = () => {
                         </div>
                         <p className="text-muted-foreground mt-2 text-[11px]">
                             Вставьте переменную в шаблон — она заменится на реальные данные.
+                        </p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Приветственное сообщение (/start)</Label>
+                        <textarea
+                            className="w-full min-h-[100px] p-3 rounded-md border bg-background text-sm resize-none"
+                            value={settings?.welcome_message || ''}
+                            onChange={(e) => setSettings(s => s ? { ...s, welcome_message: e.target.value } : s)}
+                            placeholder="Приветственное сообщение для новых пользователей"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Доступная переменная: {'{name}'} — имя пользователя
                         </p>
                     </div>
 
