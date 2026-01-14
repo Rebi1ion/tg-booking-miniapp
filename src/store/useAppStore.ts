@@ -133,8 +133,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         // Load branch-specific services and masters
         if (branch) {
             try {
+                const userId = get().user?.id;
+                const servicesUrl = userId
+                    ? `${API_URL}/branches/${branch.id}/services?userId=${userId}`
+                    : `${API_URL}/branches/${branch.id}/services`;
+
                 const [servicesRes, mastersRes] = await Promise.all([
-                    fetch(`${API_URL}/branches/${branch.id}/services`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
+                    fetch(servicesUrl, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
                     fetch(`${API_URL}/branches/${branch.id}/masters`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
                 ]);
                 const services = await servicesRes.json();

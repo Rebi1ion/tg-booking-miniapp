@@ -209,8 +209,10 @@ router.get('/:id/masters', async (req, res) => {
 });
 
 // GET /api/branches/:id/services - get services available in branch (derived from masters)
+// Optional: ?userId=xxx to include order_count for personalized sorting
 router.get('/:id/services', async (req, res) => {
     const { id: branch_id } = req.params;
+    const { userId } = req.query;
     console.log(`GET /api/branches/${branch_id}/services hit`);
     try {
         // Get all masters assigned to this branch
@@ -237,7 +239,32 @@ router.get('/:id/services', async (req, res) => {
             });
         });
 
-        const services = Array.from(servicesMap.values());
+        let services = Array.from(servicesMap.values());
+
+        // If userId provided, add order_count for personalization
+        if (userId && typeof userId === 'string') {
+            const bookingCounts = await prisma.booking.groupBy({
+                by: ['service_id'],
+                where: {
+                    user_id: userId,
+                    status: { in: ['paid', 'completed'] }
+                },
+                _count: { service_id: true }
+            });
+
+            const countMap = new Map(
+                bookingCounts.map(c => [c.service_id, c._count.service_id])
+            );
+
+            services = services.map(s => ({
+                ...s,
+                order_count: countMap.get(s.id) || 0
+            }));
+
+            // Sort by order_count descending
+            services.sort((a, b) => (b.order_count || 0) - (a.order_count || 0));
+        }
+
         res.json(services);
     } catch (error: any) {
         console.error(`GET /api/branches/${branch_id}/services error:`, error);
