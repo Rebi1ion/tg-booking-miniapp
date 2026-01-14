@@ -98,6 +98,7 @@ const getSettings = async () => {
             birthday_promo_days: 7,
             require_prepayment: false,
             banned_users: '[]',
+            welcome_message: '👋 Добро пожаловать, {name}!\n\n🎉 Мы рады видеть вас в нашем сервисе бронирования!\n\n📱 Нажмите кнопку меню (слева от поля ввода) чтобы записаться.\n📋 Нажмите "Мои записи" чтобы посмотреть ваши бронирования.\n\n✨ Быстро, удобно, в любое время!',
             msg_booking_confirmed: '✅ Вы записаны!\n\n📅 Дата: {date}\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nЖдём вас!',
             msg_reminder_24h: '🔔 Напоминание о записи!\n\nДо вашей встречи остался 1 день.\n\n📅 Дата: {date}\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nЖдём вас!',
             msg_reminder_2h: '🔔 Вы записаны через 2 часа!\n\nЖдем вас совсем скоро!\n\n⏰ Время: {time}\n👤 Мастер: {master}\n⭐ Услуга: {service}\n\nДо встречи!',
