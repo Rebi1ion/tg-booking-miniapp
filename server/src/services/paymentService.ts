@@ -9,6 +9,28 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const PAYMENT_PROVIDER_TOKEN = process.env.PAYMENT_PROVIDER_TOKEN;
 const TIMEZONE = process.env.TIMEZONE || 'Europe/Moscow';
 
+// YooMoney error codes to Russian messages
+const YOOMONEY_ERROR_MESSAGES: Record<string, string> = {
+    '3d_secure_failed': '❌ Ошибка 3D-Secure. Попробуйте другую карту.',
+    'call_issuer': '❌ Свяжитесь с банком для разрешения операции.',
+    'card_expired': '❌ Срок действия карты истёк.',
+    'fraud_suspected': '❌ Платёж отклонён системой безопасности.',
+    'general_decline': '❌ Платёж отклонён. Попробуйте другую карту.',
+    'insufficient_funds': '❌ Недостаточно средств на карте.',
+    'invalid_card_number': '❌ Неверный номер карты.',
+    'invalid_csc': '❌ Неверный CVV/CVC код.',
+    'issuer_unavailable': '❌ Банк недоступен. Попробуйте позже.',
+    'payment_method_limit_exceeded': '❌ Превышен лимит по карте.',
+    'payment_method_restricted': '❌ Карта заблокирована для онлайн-платежей.',
+    'country_forbidden': '❌ Платежи из вашей страны не поддерживаются.'
+};
+
+// Get user-friendly error message
+const getPaymentErrorMessage = (errorCode?: string): string => {
+    if (!errorCode) return 'Ошибка платежа. Попробуйте ещё раз.';
+    return YOOMONEY_ERROR_MESSAGES[errorCode] || `Ошибка платежа: ${errorCode}`;
+};
+
 interface PaymentData {
     bookingId: string;
     userId: number;
