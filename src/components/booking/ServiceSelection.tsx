@@ -32,17 +32,13 @@ export const ServiceSelection = () => {
         };
     }, [services]);
 
-    // Set initial category
+    // Set initial category - always start with "Ваш выбор" tab
     useEffect(() => {
-        if (categories.length > 0 && !activeCategory) {
-            // If there are recommended services, show "Рекомендованные" first
-            if (recommendedServices.length > 0) {
-                setActiveCategory('recommended');
-            } else {
-                setActiveCategory(categories[0]);
-            }
+        if (!activeCategory) {
+            // Always start with "Ваш выбор" tab
+            setActiveCategory('recommended');
         }
-    }, [categories, activeCategory, recommendedServices]);
+    }, [activeCategory]);
 
     // Check scroll arrows visibility
     const checkScrollArrows = () => {
@@ -78,24 +74,23 @@ export const ServiceSelection = () => {
         return activeCategory ? (groupedServices[activeCategory] || []) : [];
     }, [activeCategory, recommendedServices, groupedServices]);
 
-    // All tabs including "Рекомендованные" if applicable
+    // All tabs - always include "Ваш выбор" first
     const allTabs = useMemo(() => {
         const tabs: { key: string; label: string; icon?: React.ReactNode }[] = [];
 
-        if (recommendedServices.length > 0) {
-            tabs.push({
-                key: 'recommended',
-                label: 'Для вас',
-                icon: <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-            });
-        }
+        // Always show "Ваш выбор" tab first
+        tabs.push({
+            key: 'recommended',
+            label: 'Ваш выбор',
+            icon: <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+        });
 
         categories.forEach(cat => {
             tabs.push({ key: cat, label: cat });
         });
 
         return tabs;
-    }, [categories, recommendedServices]);
+    }, [categories]);
 
     return (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -183,7 +178,20 @@ export const ServiceSelection = () => {
                     </Card>
                 ))}
 
-                {displayServices.length === 0 && (
+                {displayServices.length === 0 && activeCategory === 'recommended' && (
+                    <div className="text-center py-12 px-4">
+                        <div className="text-4xl mb-4">👋</div>
+                        <h3 className="text-lg font-semibold mb-2">Добро пожаловать!</h3>
+                        <p className="text-muted-foreground mb-4">
+                            Здесь будут отображаться услуги, которые вы бронируете чаще всего.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Выберите категорию выше, чтобы найти нужную услугу ☝️
+                        </p>
+                    </div>
+                )}
+
+                {displayServices.length === 0 && activeCategory !== 'recommended' && (
                     <div className="text-center text-muted-foreground py-8">
                         Нет услуг в этой категории
                     </div>
