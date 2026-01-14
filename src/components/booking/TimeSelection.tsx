@@ -97,6 +97,22 @@ export const TimeSelection = () => {
         <div className="space-y-6">
             <h2 className="text-xl font-bold text-center">Выберите дату и время</h2>
 
+
+
+            <div className="flex justify-center bg-card rounded-lg p-2 shadow-sm border">
+                <Calendar
+                    mode="single"
+                    required
+                    selected={selectedDate || undefined}
+                    onSelect={handleDateSelect}
+                    month={month}
+                    onMonthChange={setMonth}
+                    className="rounded-md border shadow"
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                />
+            </div>
+
             {selectedDate && (
                 <div className="space-y-4 animate-in fade-in">
                     <h3 className="text-sm font-medium text-muted-foreground text-center">
@@ -144,20 +160,6 @@ export const TimeSelection = () => {
                     )}
                 </div>
             )}
-
-            <div className="flex justify-center bg-card rounded-lg p-2 shadow-sm border">
-                <Calendar
-                    mode="single"
-                    required
-                    selected={selectedDate || undefined}
-                    onSelect={handleDateSelect}
-                    month={month}
-                    onMonthChange={setMonth}
-                    className="rounded-md border shadow"
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                    initialFocus
-                />
-            </div>
 
             <Button
                 className="w-full mt-6"

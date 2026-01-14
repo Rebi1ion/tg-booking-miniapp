@@ -234,14 +234,19 @@ export const initPaymentHandlers = (bot: Telegraf) => {
             // Check if this is a prepayment (prepay:BOOKING_ID format)
             if (payload.startsWith('prepay:')) {
                 const bookingId = payload.replace('prepay:', '');
+                console.log('Pre-checkout query for prepayment:', bookingId);
+
                 const booking = await prisma.booking.findUnique({
                     where: { id: bookingId }
                 });
 
                 if (!booking) {
+                    console.log('Pre-checkout: booking not found');
                     await ctx.answerPreCheckoutQuery(false, 'Бронирование не найдено');
                     return;
                 }
+
+                console.log('Pre-checkout: booking status =', booking.status);
 
                 if (booking.status === 'paid') {
                     await ctx.answerPreCheckoutQuery(false, 'Уже оплачено');
@@ -253,6 +258,7 @@ export const initPaymentHandlers = (bot: Telegraf) => {
                     return;
                 }
 
+                // Allow payment for pending or pending_prepayment statuses
                 await ctx.answerPreCheckoutQuery(true);
                 console.log('Pre-checkout approved for prepayment:', bookingId);
                 return;

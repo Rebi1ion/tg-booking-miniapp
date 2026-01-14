@@ -22,7 +22,7 @@ interface PromoValidation {
 }
 
 export const BookingSummary = () => {
-    const { selectedService, selectedMaster, selectedDate, selectedTimeSlot, submitBooking, resetBooking, user } = useAppStore();
+    const { selectedService, selectedMaster, selectedDate, selectedTimeSlot, submitBooking, resetBooking, user, loadInitialData } = useAppStore();
     const [isProcessing, setIsProcessing] = useState(false);
     const [promoCode, setPromoCode] = useState('');
     const [promoValidation, setPromoValidation] = useState<PromoValidation | null>(null);
@@ -112,6 +112,11 @@ export const BookingSummary = () => {
                 showToast("Запись подтверждена!", 'success');
             }
             resetBooking();
+
+            // Reload services to update recommendations (with delay to allow backend to process)
+            setTimeout(() => {
+                loadInitialData(user?.id);
+            }, 2000);
         } else {
             showToast(result.error || "Не удалось создать запись.", 'error');
         }
