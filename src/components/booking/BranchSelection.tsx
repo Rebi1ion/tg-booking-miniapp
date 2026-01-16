@@ -118,41 +118,38 @@ export function BranchSelection({ onBranchSelected }: BranchSelectionProps) {
         return (
             <Card className="mb-4 border-primary/20 bg-primary/5">
                 <CardContent className="p-3">
-                    <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Building2 className="w-4 h-4 text-primary" />
-                                <span className="font-medium">{selectedBranch.name}</span>
-                            </div>
-                            {selectedBranch.address && (
-                                <p className="text-xs text-muted-foreground flex items-center gap-1 ml-6 mb-1">
-                                    <MapPin className="w-3 h-3" />
-                                    {selectedBranch.address}
-                                </p>
-                            )}
-                            <div className="flex flex-wrap gap-2 ml-6 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {selectedBranch.start_hour}:00 — {selectedBranch.end_hour}:00
-                                </span>
-                                {selectedBranch.phone && (
-                                    <span className="flex items-center gap-1">
-                                        <Phone className="w-3 h-3" />
-                                        {selectedBranch.phone}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        {branches.length > 1 && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleClearBranch}
-                            >
-                                Изменить
-                            </Button>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Building2 className="w-4 h-4 text-primary" />
+                        <span className="font-medium">{selectedBranch.name}</span>
+                    </div>
+                    {selectedBranch.address && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 ml-6 mb-1">
+                            <MapPin className="w-3 h-3" />
+                            {selectedBranch.address}
+                        </p>
+                    )}
+                    <div className="flex flex-wrap gap-2 ml-6 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {selectedBranch.start_hour}:00 — {selectedBranch.end_hour}:00
+                        </span>
+                        {selectedBranch.phone && (
+                            <span className="flex items-center gap-1">
+                                <Phone className="w-3 h-3" />
+                                {selectedBranch.phone}
+                            </span>
                         )}
                     </div>
+                    {branches.length > 1 && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-3"
+                            onClick={handleClearBranch}
+                        >
+                            Изменить филиал
+                        </Button>
+                    )}
                 </CardContent>
             </Card>
         );
