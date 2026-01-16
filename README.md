@@ -159,32 +159,21 @@ sudo certbot --nginx -d miniapp.yourdomain.com -d api.yourdomain.com
 export const shopConfig: ShopConfig = {
   // === ОСНОВНЫЕ ДАННЫЕ ===
   appName: "Студия красоты Элита",        // Название
-  businessType: "beauty_salon",            // barbershop | beauty_salon | spa | nail_studio
   description: "Премиальные услуги",       // Описание
-  currency: "RUB",                         // Валюта
+  timezone: "Europe/Moscow",               // Часовой пояс
 
   // === АДМИНИСТРАТОРЫ ===
   // Telegram ID (узнать через @userinfobot)
   adminIds: [123456789, 987654321],
 
-  // === КОНТАКТЫ ===
-  contacts: {
-    phone: "+7 (999) 123-45-67",
-    address: "г. Москва, ул. Примерная, 1",
-    telegramChannel: "@yoursalon",
-  },
-
   // === ОПЛАТА ===
   payment: {
     enabled: true,
-    providerToken: "381764678:TEST:...",   // Токен из BotFather
     requirePrepayment: false,
   },
 
   // === БРЕНДИНГ ===
   branding: {
-    primaryColor: "#007AFF",               // Основной цвет
-    logoUrl: "/logo.png",                  // Логотип
     welcomeMessage: "Добро пожаловать!",
   },
 

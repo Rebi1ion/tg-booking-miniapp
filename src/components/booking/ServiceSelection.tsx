@@ -171,7 +171,7 @@ export const ServiceSelection = () => {
                                     <p className="text-xs text-muted-foreground mt-1">{service.duration_minutes} мин</p>
                                 </div>
                                 <div className="text-right">
-                                    <span className="font-bold text-lg">{service.price} {shopConfig.currency}</span>
+                                    <span className="font-bold text-lg">{service.price} ₽</span>
                                 </div>
                             </div>
                         </CardHeader>

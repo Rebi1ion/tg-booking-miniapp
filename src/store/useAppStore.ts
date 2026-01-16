@@ -386,6 +386,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     },
 
     formatPrice: (price: number) => {
-        return `${price.toLocaleString('ru-RU')} ${shopConfig.currency === 'RUB' ? '₽' : shopConfig.currency}`;
+        return `${price.toLocaleString('ru-RU')} ₽`;
     }
 }));

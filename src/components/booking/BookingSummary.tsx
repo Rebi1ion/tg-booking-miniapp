@@ -202,17 +202,17 @@ export const BookingSummary = () => {
                             <>
                                 <div className="flex justify-between text-muted-foreground">
                                     <span>Стоимость</span>
-                                    <span className="line-through">{originalPrice} {shopConfig.currency}</span>
+                                    <span className="line-through">{originalPrice} ₽</span>
                                 </div>
                                 <div className="flex justify-between text-green-600">
                                     <span>Скидка</span>
-                                    <span>-{discountAmount} {shopConfig.currency}</span>
+                                    <span>-{discountAmount} ₽</span>
                                 </div>
                             </>
                         )}
                         <div className="flex justify-between text-lg font-bold">
                             <span>Итого</span>
-                            <span>{finalPrice} {shopConfig.currency}</span>
+                            <span>{finalPrice} ₽</span>
                         </div>
                     </div>
                 </CardContent>
@@ -225,7 +225,7 @@ export const BookingSummary = () => {
             >
                 {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
                 {shopConfig.payment.enabled
-                    ? `Оплатить ${finalPrice} ${shopConfig.currency === 'RUB' ? '₽' : shopConfig.currency}`
+                    ? `Оплатить ${finalPrice} ₽`
                     : "Записаться"
                 }
             </Button>
