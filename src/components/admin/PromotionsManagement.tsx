@@ -201,29 +201,26 @@ export function PromotionsManagement() {
                                     />
                                 </div>
 
-                                <div className="grid gap-3 grid-cols-2">
-                                    <div className="space-y-1.5 overflow-hidden">
-                                        <Label className="text-xs truncate block">Тип скидки</Label>
-                                        <select
-                                            className="w-full h-10 px-3 rounded-md border bg-background text-sm"
-                                            value={formData.discount_type}
-                                            onChange={(e) => setFormData({ ...formData, discount_type: e.target.value as 'percent' | 'fixed' })}
-                                        >
-                                            <option value="percent">Процент (%)</option>
-                                            <option value="fixed">Сумма (₽)</option>
-                                        </select>
-                                    </div>
+                                <div>
+                                    <Label>Тип скидки</Label>
+                                    <select
+                                        className="w-full h-10 px-3 rounded-md border bg-background"
+                                        value={formData.discount_type}
+                                        onChange={(e) => setFormData({ ...formData, discount_type: e.target.value as 'percent' | 'fixed' })}
+                                    >
+                                        <option value="percent">Процент (%)</option>
+                                        <option value="fixed">Сумма (₽)</option>
+                                    </select>
+                                </div>
 
-                                    <div className="space-y-1.5 overflow-hidden">
-                                        <Label className="text-xs truncate block">Размер</Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            value={formData.discount_value || ''}
-                                            onChange={(e) => setFormData({ ...formData, discount_value: e.target.value === '' ? 0 : parseInt(e.target.value) })}
-                                            required
-                                        />
-                                    </div>
+                                <div>
+                                    <Label>Размер скидки</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        value={formData.discount_value || ''}
+                                        onChange={(e) => setFormData({ ...formData, discount_value: e.target.value === '' ? 0 : parseInt(e.target.value) })} required
+                                    />
                                 </div>
 
                                 <div className="col-span-2">
@@ -269,27 +266,25 @@ export function PromotionsManagement() {
                                     <Label>Активна</Label>
                                 </div>
 
-                                <div className="grid gap-3 grid-cols-2">
-                                    <div className="space-y-1.5 overflow-hidden">
-                                        <Label className="text-xs truncate block">Макс. на клиента</Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            value={formData.max_uses_per_user}
-                                            onChange={(e) => setFormData({ ...formData, max_uses_per_user: parseInt(e.target.value) || 1 })}
-                                        />
-                                    </div>
+                                <div>
+                                    <Label>Макс. на клиента</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        value={formData.max_uses_per_user}
+                                        onChange={(e) => setFormData({ ...formData, max_uses_per_user: parseInt(e.target.value) || 1 })}
+                                    />
+                                </div>
 
-                                    <div className="space-y-1.5 overflow-hidden">
-                                        <Label className="text-xs truncate block">Всего</Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            placeholder="∞"
-                                            value={formData.max_total_uses}
-                                            onChange={(e) => setFormData({ ...formData, max_total_uses: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                                        />
-                                    </div>
+                                <div>
+                                    <Label>Всего использований</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        placeholder="∞"
+                                        value={formData.max_total_uses}
+                                        onChange={(e) => setFormData({ ...formData, max_total_uses: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                    />
                                 </div>
                             </div>
 
