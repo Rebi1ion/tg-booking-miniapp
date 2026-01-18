@@ -130,6 +130,7 @@ model Promotion {
   is_active          Boolean      @default(true)
   applies_to         String?      // 'all' or comma-separated service IDs
   max_uses_per_user  Int          @default(1)  // Max times one user can use this promo
+  max_total_uses     Int?         // Total usage limit (null = unlimited), e.g. "for first 50 clients"
   created_at         DateTime     @default(now())
   usages             PromoUsage[]
 }
@@ -145,13 +146,14 @@ model PromoUsage {
 }
 
 model Settings {
-  id                   String  @id @default("main")
-  birthday_enabled     Boolean @default(true)
-  birthday_discount    Int     @default(10)      // % discount
-  birthday_message     String  @default("🎂 С днём рождения! Дарим вам скидку {discount}%!")
-  birthday_promo_days  Int     @default(7)       // Days the promo is valid
-  require_prepayment   Boolean @default(false)   // Require payment before booking is created
-  banned_users         String  @default("[]")    // JSON array of banned telegram IDs
+  id                          String  @id @default("main")
+  birthday_enabled            Boolean @default(true)
+  birthday_discount           Int     @default(10)      // % discount
+  birthday_message            String  @default("🎂 С днём рождения! Дарим вам скидку {discount}%!")
+  birthday_promo_days         Int     @default(7)       // Days the promo is valid
+  birthday_notify_days_before Int     @default(0)       // Days before birthday to send notification (0 = on birthday)
+  require_prepayment          Boolean @default(false)   // Require payment before booking is created
+  banned_users                String  @default("[]")    // JSON array of banned telegram IDs
   
   // Message templates (use {name}, {date}, {time}, {service}, {master}, {price})
   welcome_message       String @default("👋 Добро пожаловать, {name}!\n\n🎉 Мы рады видеть вас в нашем сервисе бронирования!\n\n📱 Нажмите кнопку меню (слева от поля ввода) чтобы записаться.\n📋 Нажмите \"Мои записи\" чтобы посмотреть ваши бронирования.\n\n✨ Быстро, удобно, в любое время!")

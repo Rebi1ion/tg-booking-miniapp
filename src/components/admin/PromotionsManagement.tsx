@@ -22,6 +22,7 @@ interface Promotion {
     is_active: boolean;
     applies_to?: string;
     max_uses_per_user: number;
+    max_total_uses?: number;
     created_at: string;
 }
 
@@ -41,7 +42,8 @@ export function PromotionsManagement() {
         end_date: '',
         is_active: true,
         applies_to: 'all',
-        max_uses_per_user: 1
+        max_uses_per_user: 1,
+        max_total_uses: '' as string | number
     });
 
     useEffect(() => {
@@ -115,7 +117,8 @@ export function PromotionsManagement() {
             end_date: promotion.end_date ? promotion.end_date.split('T')[0] : '',
             is_active: promotion.is_active,
             applies_to: promotion.applies_to || 'all',
-            max_uses_per_user: promotion.max_uses_per_user || 1
+            max_uses_per_user: promotion.max_uses_per_user || 1,
+            max_total_uses: promotion.max_total_uses || ''
         });
         setIsCreating(true);
     };
@@ -131,7 +134,8 @@ export function PromotionsManagement() {
             end_date: '',
             is_active: true,
             applies_to: 'all',
-            max_uses_per_user: 1
+            max_uses_per_user: 1,
+            max_total_uses: ''
         });
         setEditingPromotion(null);
         setIsCreating(false);
@@ -247,6 +251,14 @@ export function PromotionsManagement() {
                                     />
                                 </div>
 
+                                {!formData.promo_code && (formData.start_date || formData.end_date) && (
+                                    <div className="col-span-2 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                                            💡 Без промокода скидка автоматически применится к записям на даты в указанном диапазоне
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="col-span-2 flex items-center gap-2">
                                     <Switch
                                         checked={formData.is_active}
@@ -255,7 +267,7 @@ export function PromotionsManagement() {
                                     <Label>Активна</Label>
                                 </div>
 
-                                <div className="col-span-2">
+                                <div>
                                     <Label>Макс. использований на клиента</Label>
                                     <Input
                                         type="number"
@@ -263,7 +275,19 @@ export function PromotionsManagement() {
                                         value={formData.max_uses_per_user}
                                         onChange={(e) => setFormData({ ...formData, max_uses_per_user: parseInt(e.target.value) || 1 })}
                                     />
-                                    <p className="text-xs text-muted-foreground mt-1">Сколько раз один клиент может использовать этот промокод</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Сколько раз один клиент может использовать</p>
+                                </div>
+
+                                <div>
+                                    <Label>Всего использований</Label>
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Без лимита"
+                                        value={formData.max_total_uses}
+                                        onChange={(e) => setFormData({ ...formData, max_total_uses: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">Напр. "только для первых 50 клиентов"</p>
                                 </div>
                             </div>
 

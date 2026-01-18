@@ -15,6 +15,7 @@ interface Settings {
     birthday_discount: number;
     birthday_message: string;
     birthday_promo_days: number;
+    birthday_notify_days_before: number;
     require_prepayment: boolean;
     banned_users: string;
     welcome_message: string;
@@ -254,6 +255,28 @@ export const SettingsPanel = () => {
                                             updateSetting('birthday_promo_days', Math.min(365, Math.max(1, val)));
                                         }}
                                     />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="birthday_notify_days_before">Отправить за (дней)</Label>
+                                    <Input
+                                        id="birthday_notify_days_before"
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="0"
+                                        value={settings?.birthday_notify_days_before ?? ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '' || /^\d+$/.test(val)) {
+                                                setSettings(s => s ? { ...s, birthday_notify_days_before: val === '' ? 0 : parseInt(val) } : s);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            const val = settings?.birthday_notify_days_before ?? 0;
+                                            setSettings(s => s ? { ...s, birthday_notify_days_before: Math.min(30, Math.max(0, val)) } : s);
+                                            updateSetting('birthday_notify_days_before', Math.min(30, Math.max(0, val)));
+                                        }}
+                                    />
+                                    <p className="text-xs text-muted-foreground">0 = в день рождения</p>
                                 </div>
                             </div>
                             <div className="space-y-2">

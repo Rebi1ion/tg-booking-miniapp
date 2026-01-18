@@ -49,7 +49,7 @@ router.get('/active', async (req, res) => {
 
 // POST /api/promotions - create promotion
 router.post('/', async (req, res) => {
-    const { name, description, discount_type, discount_value, promo_code, start_date, end_date, is_active, applies_to, max_uses_per_user } = req.body;
+    const { name, description, discount_type, discount_value, promo_code, start_date, end_date, is_active, applies_to, max_uses_per_user, max_total_uses } = req.body;
     console.log("POST /api/promotions hit:", { name, promo_code });
     try {
         const promotion = await prisma.promotion.create({
@@ -63,7 +63,8 @@ router.post('/', async (req, res) => {
                 end_date: end_date ? new Date(end_date) : null,
                 is_active: is_active !== undefined ? is_active : true,
                 applies_to,
-                max_uses_per_user: parseInt(max_uses_per_user) || 1
+                max_uses_per_user: parseInt(max_uses_per_user) || 1,
+                max_total_uses: max_total_uses ? parseInt(max_total_uses) : null
             }
         });
         res.json(promotion);
@@ -76,7 +77,7 @@ router.post('/', async (req, res) => {
 // PUT /api/promotions/:id - update promotion
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, description, discount_type, discount_value, promo_code, start_date, end_date, is_active, applies_to, max_uses_per_user } = req.body;
+    const { name, description, discount_type, discount_value, promo_code, start_date, end_date, is_active, applies_to, max_uses_per_user, max_total_uses } = req.body;
     console.log(`PUT /api/promotions/${id} hit`);
     try {
         const promotion = await prisma.promotion.update({
@@ -91,7 +92,8 @@ router.put('/:id', async (req, res) => {
                 end_date: end_date ? new Date(end_date) : null,
                 is_active,
                 applies_to,
-                max_uses_per_user: max_uses_per_user !== undefined ? parseInt(max_uses_per_user) || 1 : undefined
+                max_uses_per_user: max_uses_per_user !== undefined ? parseInt(max_uses_per_user) || 1 : undefined,
+                max_total_uses: max_total_uses !== undefined ? (max_total_uses ? parseInt(max_total_uses) : null) : undefined
             }
         });
         res.json(promotion);
@@ -165,6 +167,16 @@ router.post('/validate', async (req, res) => {
             }
         }
 
+        // Check total usage limit
+        if (promotion.max_total_uses) {
+            const totalUsages = await prisma.promoUsage.count({
+                where: { promotion_id: promotion.id }
+            });
+            if (totalUsages >= promotion.max_total_uses) {
+                return res.json({ valid: false, error: 'Промокод использован максимальное количество раз' });
+            }
+        }
+
         res.json({
             valid: true,
             promotion: {
@@ -216,6 +228,85 @@ router.post('/use', async (req, res) => {
     } catch (error: any) {
         console.error("POST /api/promotions/use error:", error);
         res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/promotions/check-date - check for date-based discounts (no promo code required)
+router.post('/check-date', async (req, res) => {
+    const { booking_date, service_id, user_id } = req.body;
+    console.log("POST /api/promotions/check-date hit:", { booking_date, service_id, user_id });
+    try {
+        if (!booking_date) {
+            return res.json({ found: false });
+        }
+
+        const bookingDateObj = new Date(booking_date);
+        bookingDateObj.setHours(0, 0, 0, 0);
+
+        const bookingDateEnd = new Date(bookingDateObj);
+        bookingDateEnd.setHours(23, 59, 59, 999);
+
+        // Find active promotions without promo_code that apply to this date
+        const promotions = await prisma.promotion.findMany({
+            where: {
+                is_active: true,
+                promo_code: null, // Only date-based promotions (no promo code)
+                start_date: { lte: bookingDateEnd },
+                end_date: { gte: bookingDateObj }
+            },
+            orderBy: { discount_value: 'desc' } // Get best discount first
+        });
+
+        if (promotions.length === 0) {
+            return res.json({ found: false });
+        }
+
+        // Check if any applies to the service
+        for (const promotion of promotions) {
+            // Check service applicability
+            if (promotion.applies_to && promotion.applies_to !== 'all' && service_id) {
+                const serviceIds = promotion.applies_to.split(',').map(s => s.trim());
+                if (!serviceIds.includes(service_id)) {
+                    continue; // Skip, doesn't apply to this service
+                }
+            }
+
+            // Check total usage limit
+            if ((promotion as any).max_total_uses) {
+                const totalUsages = await prisma.promoUsage.count({
+                    where: { promotion_id: promotion.id }
+                });
+                if (totalUsages >= (promotion as any).max_total_uses) {
+                    continue; // Skip, limit reached
+                }
+            }
+
+            // Check user usage limit
+            if (user_id && promotion.max_uses_per_user > 0) {
+                const userUsages = await prisma.promoUsage.count({
+                    where: { promotion_id: promotion.id, user_id }
+                });
+                if (userUsages >= promotion.max_uses_per_user) {
+                    continue; // Skip, user limit reached
+                }
+            }
+
+            // Found applicable promotion
+            return res.json({
+                found: true,
+                promotion: {
+                    id: promotion.id,
+                    name: promotion.name,
+                    discount_type: promotion.discount_type,
+                    discount_value: promotion.discount_value
+                }
+            });
+        }
+
+        res.json({ found: false });
+    } catch (error: any) {
+        console.error("POST /api/promotions/check-date error:", error);
+        res.status(500).json({ found: false, error: error.message });
     }
 });
 

@@ -96,6 +96,7 @@ const getSettings = async () => {
             birthday_discount: 10,
             birthday_message: '🎂 С днём рождения! Дарим вам скидку {discount}%!',
             birthday_promo_days: 7,
+            birthday_notify_days_before: 0,
             require_prepayment: false,
             banned_users: '[]',
             welcome_message: '👋 Добро пожаловать, {name}!\n\n🎉 Мы рады видеть вас в нашем сервисе бронирования!\n\n📱 Нажмите кнопку меню (слева от поля ввода) чтобы записаться.\n📋 Нажмите "Мои записи" чтобы посмотреть ваши бронирования.\n\n✨ Быстро, удобно, в любое время!',
@@ -262,10 +263,6 @@ cron.schedule('0 9 * * *', async () => {
 // Birthday check function
 const checkBirthdays = async () => {
     try {
-        const today = new Date();
-        const month = today.getMonth() + 1; // 1-12
-        const day = today.getDate();
-
         // Get settings
         const settings = await getSettings();
 
@@ -275,7 +272,17 @@ const checkBirthdays = async () => {
             return;
         }
 
-        // Find users with birthday today
+        // Calculate target date (today + notify_days_before)
+        const notifyDaysBefore = (settings as any).birthday_notify_days_before ?? 0;
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + notifyDaysBefore);
+
+        const month = targetDate.getMonth() + 1; // 1-12
+        const day = targetDate.getDate();
+
+        console.log(`Checking birthdays for ${notifyDaysBefore > 0 ? `${notifyDaysBefore} days ahead (${day}/${month})` : 'today'}`);
+
+        // Find users with birthday on target date
         const users = await prisma.user.findMany({
             where: {
                 birthday: { not: null }
@@ -287,8 +294,6 @@ const checkBirthdays = async () => {
             const bd = new Date(u.birthday);
             return bd.getMonth() + 1 === month && bd.getDate() === day;
         });
-
-        console.log(`Found ${birthdayUsers.length} users with birthday today`);
 
         for (const user of birthdayUsers) {
             if (user.telegram_id) {

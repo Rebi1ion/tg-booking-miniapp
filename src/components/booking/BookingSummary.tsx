@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,12 +7,22 @@ import { Badge } from '@/components/ui/badge';
 import { shopConfig } from '@/config/shopConfig';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Loader2, Tag, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Tag, CheckCircle2, XCircle, Gift } from 'lucide-react';
 import { showToast } from '@/components/ui/toast';
 
 interface PromoValidation {
     valid: boolean;
     error?: string;
+    promotion?: {
+        id: string;
+        name: string;
+        discount_type: 'percent' | 'fixed';
+        discount_value: number;
+    };
+}
+
+interface DatePromotion {
+    found: boolean;
     promotion?: {
         id: string;
         name: string;
@@ -27,6 +37,39 @@ export const BookingSummary = () => {
     const [promoCode, setPromoCode] = useState('');
     const [promoValidation, setPromoValidation] = useState<PromoValidation | null>(null);
     const [isValidating, setIsValidating] = useState(false);
+    const [datePromotion, setDatePromotion] = useState<DatePromotion | null>(null);
+
+    // Check for date-based discounts when date or service changes
+    useEffect(() => {
+        const checkDateDiscount = async () => {
+            if (!selectedDate || !selectedService) {
+                setDatePromotion(null);
+                return;
+            }
+
+            try {
+                const res = await fetch(`${shopConfig.apiUrl}/promotions/check-date`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
+                    body: JSON.stringify({
+                        booking_date: selectedDate.toISOString(),
+                        service_id: selectedService.id,
+                        user_id: user?.id
+                    })
+                });
+                const data = await res.json();
+                setDatePromotion(data);
+            } catch (error) {
+                console.error('Failed to check date discount:', error);
+                setDatePromotion(null);
+            }
+        };
+
+        checkDateDiscount();
+    }, [selectedDate, selectedService, user?.id]);
 
     if (!selectedService || !selectedMaster || !selectedDate || !selectedTimeSlot) return null;
 
@@ -60,13 +103,24 @@ export const BookingSummary = () => {
     };
 
 
-    // Calculate discounted price
+    // Calculate discounted price - prioritize promo code, then date-based discount
     const originalPrice = selectedService.price;
     let discountAmount = 0;
     let finalPrice = originalPrice;
+    let activePromotion: { id: string; name: string; discount_type: string; discount_value: number } | null = null;
+    let isDateBasedDiscount = false;
 
     if (promoValidation?.valid && promoValidation.promotion) {
-        const { discount_type, discount_value } = promoValidation.promotion;
+        // Promo code takes priority
+        activePromotion = promoValidation.promotion;
+    } else if (datePromotion?.found && datePromotion.promotion) {
+        // Date-based discount if no promo code
+        activePromotion = datePromotion.promotion;
+        isDateBasedDiscount = true;
+    }
+
+    if (activePromotion) {
+        const { discount_type, discount_value } = activePromotion;
         if (discount_type === 'percent') {
             discountAmount = Math.round(originalPrice * discount_value / 100);
         } else {
@@ -79,10 +133,10 @@ export const BookingSummary = () => {
         setIsProcessing(true);
 
         // Pass the final price (with discount if promo applied)
-        const result = await submitBooking(finalPrice, promoValidation?.promotion?.id);
+        const result = await submitBooking(finalPrice, activePromotion?.id);
 
         // If booking successful and promo was used, record the usage
-        if (result.success && promoValidation?.valid && promoValidation.promotion && user) {
+        if (result.success && activePromotion && user) {
             try {
                 await fetch(`${shopConfig.apiUrl}/promotions/use`, {
                     method: 'POST',
@@ -91,7 +145,7 @@ export const BookingSummary = () => {
                         'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({
-                        promotion_id: promoValidation.promotion.id,
+                        promotion_id: activePromotion.id,
                         user_id: user.id
                     })
                 });
@@ -149,6 +203,21 @@ export const BookingSummary = () => {
                         <span className="text-muted-foreground">Время</span>
                         <span className="font-medium">{selectedTimeSlot}</span>
                     </div>
+
+                    {/* Automatic Date Discount Banner */}
+                    {isDateBasedDiscount && datePromotion?.promotion && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600">
+                            <Gift className="w-4 h-4 flex-shrink-0" />
+                            <div className="text-sm">
+                                <span className="font-medium">{datePromotion.promotion.name}</span>
+                                <span className="ml-1">
+                                    ({datePromotion.promotion.discount_type === 'percent'
+                                        ? `-${datePromotion.promotion.discount_value}%`
+                                        : `-${datePromotion.promotion.discount_value} ₽`})
+                                </span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Promo Code Input */}
                     <div className="border-t pt-4 space-y-2">

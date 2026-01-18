@@ -60,6 +60,7 @@ git clone https://github.com/YOUR_REPO/tg-miniapp.git .
 ```
 /mybots → @topstyle_booking_bot → Bot Settings → Menu Button → Configure
 ```
+Бесплатные поддомены: https://freedns.afraid.org
 - URL: `https://miniapp.topstyle.com` (ваш домен)
 - Title: `📅 Записаться`
 
