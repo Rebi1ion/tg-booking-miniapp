@@ -246,16 +246,30 @@ router.post('/check-date', async (req, res) => {
         const bookingDateEnd = new Date(bookingDateObj);
         bookingDateEnd.setHours(23, 59, 59, 999);
 
+        console.log("Checking date-based promotions for booking date:", bookingDateObj.toISOString());
+
         // Find active promotions without promo_code that apply to this date
+        // promo_code can be null OR empty string ""
         const promotions = await prisma.promotion.findMany({
             where: {
                 is_active: true,
-                promo_code: null, // Only date-based promotions (no promo code)
-                start_date: { lte: bookingDateEnd },
-                end_date: { gte: bookingDateObj }
+                OR: [
+                    { promo_code: null },
+                    { promo_code: '' }
+                ],
+                start_date: {
+                    not: null,
+                    lte: bookingDateEnd
+                },
+                end_date: {
+                    not: null,
+                    gte: bookingDateObj
+                }
             },
             orderBy: { discount_value: 'desc' } // Get best discount first
         });
+
+        console.log("Found date-based promotions:", promotions.length, promotions.map(p => ({ id: p.id, name: p.name, start: p.start_date, end: p.end_date })));
 
         if (promotions.length === 0) {
             return res.json({ found: false });

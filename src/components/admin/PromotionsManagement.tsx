@@ -267,27 +267,29 @@ export function PromotionsManagement() {
                                     <Label>Активна</Label>
                                 </div>
 
-                                <div>
-                                    <Label>Макс. использований на клиента</Label>
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        value={formData.max_uses_per_user}
-                                        onChange={(e) => setFormData({ ...formData, max_uses_per_user: parseInt(e.target.value) || 1 })}
-                                    />
-                                    <p className="text-xs text-muted-foreground mt-1">Сколько раз один клиент может использовать</p>
-                                </div>
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>Макс. на клиента</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            value={formData.max_uses_per_user}
+                                            onChange={(e) => setFormData({ ...formData, max_uses_per_user: parseInt(e.target.value) || 1 })}
+                                        />
+                                        <p className="text-xs text-muted-foreground">Сколько раз один клиент может использовать</p>
+                                    </div>
 
-                                <div>
-                                    <Label>Всего использований</Label>
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        placeholder="Без лимита"
-                                        value={formData.max_total_uses}
-                                        onChange={(e) => setFormData({ ...formData, max_total_uses: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                                    />
-                                    <p className="text-xs text-muted-foreground mt-1">Напр. "только для первых 50 клиентов"</p>
+                                    <div className="space-y-2">
+                                        <Label>Всего использований</Label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            placeholder="Без лимита"
+                                            value={formData.max_total_uses}
+                                            onChange={(e) => setFormData({ ...formData, max_total_uses: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                        />
+                                        <p className="text-xs text-muted-foreground">Напр. "для первых 50 клиентов"</p>
+                                    </div>
                                 </div>
                             </div>
 
