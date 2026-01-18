@@ -240,13 +240,23 @@ router.post('/check-date', async (req, res) => {
             return res.json({ found: false });
         }
 
-        const bookingDateObj = new Date(booking_date);
-        bookingDateObj.setHours(0, 0, 0, 0);
+        // Parse YYYY-MM-DD string or ISO date
+        // For YYYY-MM-DD, create UTC midnight date
+        let bookingDateObj: Date;
+        if (booking_date.length === 10 && booking_date.includes('-')) {
+            // YYYY-MM-DD format - parse as UTC
+            const [year, month, day] = booking_date.split('-').map(Number);
+            bookingDateObj = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+        } else {
+            // ISO format - convert to UTC midnight
+            bookingDateObj = new Date(booking_date);
+            bookingDateObj.setUTCHours(0, 0, 0, 0);
+        }
 
         const bookingDateEnd = new Date(bookingDateObj);
-        bookingDateEnd.setHours(23, 59, 59, 999);
+        bookingDateEnd.setUTCHours(23, 59, 59, 999);
 
-        console.log("Checking date-based promotions for booking date:", bookingDateObj.toISOString());
+        console.log("Checking date-based promotions for booking date:", bookingDateObj.toISOString(), "to", bookingDateEnd.toISOString());
 
         // Find active promotions without promo_code that apply to this date
         // promo_code can be null OR empty string ""

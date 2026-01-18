@@ -267,28 +267,28 @@ export function PromotionsManagement() {
                                     <Label>Активна</Label>
                                 </div>
 
-                                <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-4 grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label>Макс. на клиента</Label>
+                                        <Label className="whitespace-nowrap">Макс. на клиента</Label>
                                         <Input
                                             type="number"
                                             min="1"
                                             value={formData.max_uses_per_user}
                                             onChange={(e) => setFormData({ ...formData, max_uses_per_user: parseInt(e.target.value) || 1 })}
                                         />
-                                        <p className="text-xs text-muted-foreground">Сколько раз один клиент может использовать</p>
+                                        <p className="text-xs text-muted-foreground whitespace-nowrap">На одного клиента</p>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label>Всего использований</Label>
+                                        <Label className="whitespace-nowrap">Всего использований</Label>
                                         <Input
                                             type="number"
                                             min="1"
-                                            placeholder="Без лимита"
+                                            placeholder="∞"
                                             value={formData.max_total_uses}
                                             onChange={(e) => setFormData({ ...formData, max_total_uses: e.target.value === '' ? '' : parseInt(e.target.value) })}
                                         />
-                                        <p className="text-xs text-muted-foreground">Напр. "для первых 50 клиентов"</p>
+                                        <p className="text-xs text-muted-foreground whitespace-nowrap">Для первых N клиентов</p>
                                     </div>
                                 </div>
                             </div>

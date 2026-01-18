@@ -48,6 +48,12 @@ export const BookingSummary = () => {
             }
 
             try {
+                // Send date as YYYY-MM-DD string to avoid timezone issues
+                const year = selectedDate.getFullYear();
+                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(selectedDate.getDate()).padStart(2, '0');
+                const dateString = `${year}-${month}-${day}`;
+
                 const res = await fetch(`${shopConfig.apiUrl}/promotions/check-date`, {
                     method: 'POST',
                     headers: {
@@ -55,7 +61,7 @@ export const BookingSummary = () => {
                         'ngrok-skip-browser-warning': 'true'
                     },
                     body: JSON.stringify({
-                        booking_date: selectedDate.toISOString(),
+                        booking_date: dateString,
                         service_id: selectedService.id,
                         user_id: user?.id
                     })
