@@ -267,17 +267,18 @@ export function PromotionsManagement() {
                                 </div>
 
                                 <div>
-                                    <Label>Макс. на клиента</Label>
+                                    <Label className="text-sm">На клиента</Label>
                                     <Input
                                         type="number"
                                         min="1"
                                         value={formData.max_uses_per_user}
                                         onChange={(e) => setFormData({ ...formData, max_uses_per_user: parseInt(e.target.value) || 1 })}
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">Раз на 1 человека</p>
                                 </div>
 
                                 <div>
-                                    <Label>Всего использований</Label>
+                                    <Label className="text-sm">Всего</Label>
                                     <Input
                                         type="number"
                                         min="1"
@@ -285,6 +286,7 @@ export function PromotionsManagement() {
                                         value={formData.max_total_uses}
                                         onChange={(e) => setFormData({ ...formData, max_total_uses: e.target.value === '' ? '' : parseInt(e.target.value) })}
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">Первые N человек</p>
                                 </div>
                             </div>
 
