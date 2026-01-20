@@ -92,6 +92,16 @@ DB_NAME="miniapp_${CLIENT_NAME}"
 DB_USER="miniapp_${CLIENT_NAME}"
 DB_PASSWORD=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
 
+# Читаем часовой пояс из серверного конфига или используем по умолчанию
+SERVER_CONFIG="/etc/miniapps/config"
+if [ -f "$SERVER_CONFIG" ]; then
+    source "$SERVER_CONFIG"
+    print_info "Часовой пояс из конфига: $TIMEZONE"
+else
+    TIMEZONE="Europe/Moscow"
+    print_warning "Конфиг $SERVER_CONFIG не найден, используем: $TIMEZONE"
+fi
+
 echo ""
 print_header "ПОДТВЕРЖДЕНИЕ"
 echo "Клиент:           $CLIENT_NAME"
@@ -101,6 +111,7 @@ echo "API:              https://$API_DOMAIN"
 echo "Порт бекенда:     $BACKEND_PORT"
 echo "БД PostgreSQL:    $DB_NAME"
 echo "Пользователь БД:  $DB_USER"
+echo "Часовой пояс:     $TIMEZONE"
 echo ""
 
 read -p "Продолжить? (y/n): " CONFIRM
@@ -165,7 +176,7 @@ DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}"
 # ===== SERVER =====
 PORT=$BACKEND_PORT
 NODE_ENV=production
-TIMEZONE=Europe/Moscow
+TIMEZONE=$TIMEZONE
 
 # ===== TELEGRAM BOT =====
 TELEGRAM_BOT_TOKEN=$BOT_TOKEN
@@ -355,8 +366,33 @@ print_header "8. Настройка прав доступа"
 
 chown -R www-data:www-data "$DEPLOY_DIR"
 chmod -R 755 "$DEPLOY_DIR"
+chmod +x "$DEPLOY_DIR/server/scripts/backup.sh"
 
 print_success "Права установлены"
+
+# ============================================================================
+# 9. НАСТРОЙКА CRON (БЕКАП + ПЕРЕЗАПУСК PM2)
+# ============================================================================
+print_header "9. Настройка автоматического бекапа"
+
+# Создаем папку для бекапов
+mkdir -p "$DEPLOY_DIR/backups"
+
+# Добавляем cron задачу (ежедневно в 3:00)
+CRON_JOB="0 3 * * * $DEPLOY_DIR/server/scripts/backup.sh $CLIENT_NAME >> /var/log/miniapp-backups.log 2>&1"
+
+# Проверяем, есть ли уже такая задача
+if crontab -l 2>/dev/null | grep -q "$CLIENT_NAME"; then
+    print_warning "Cron задача для $CLIENT_NAME уже существует"
+else
+    # Добавляем задачу
+    (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+    print_success "Cron задача добавлена: ежедневный бекап в 03:00"
+fi
+
+# Показываем текущие cron задачи
+print_info "Текущие cron задачи:"
+crontab -l 2>/dev/null | grep miniapp || echo "  (нет задач miniapp)"
 
 # ============================================================================
 # ГОТОВО!
@@ -378,6 +414,11 @@ echo "🔧 Команды PM2:"
 echo "   pm2 status"
 echo "   pm2 logs miniapp-$CLIENT_NAME"
 echo "   pm2 restart miniapp-$CLIENT_NAME"
+echo ""
+echo "💾 Бекапы:"
+echo "   Расписание: ежедневно в 03:00"
+echo "   Папка:      $DEPLOY_DIR/backups/"
+echo "   Ручной:     bash $DEPLOY_DIR/server/scripts/backup.sh $CLIENT_NAME"
 echo ""
 echo -e "${YELLOW}⚠ ВАЖНО: Сохраните пароль от базы данных!${NC}"
 
@@ -404,6 +445,13 @@ Connection URL:
 PM2 Process:
   Name: miniapp-$CLIENT_NAME
   Port: $BACKEND_PORT
+
+Timezone: $TIMEZONE
+
+Backup:
+  Schedule: Daily at 03:00 ($TIMEZONE)
+  Script:   $DEPLOY_DIR/server/scripts/backup.sh
+  Folder:   $DEPLOY_DIR/backups/
 
 Bot Token: $BOT_TOKEN
 Admin IDs: $ADMIN_IDS

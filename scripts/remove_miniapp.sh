@@ -78,8 +78,17 @@ rm -f "/etc/nginx/sites-available/$CLIENT_NAME"
 nginx -t && systemctl reload nginx
 print_success "Nginx конфиг удален"
 
-# 4. Удаление файлов
-print_header "4. Удаление файлов"
+# 4. Удаление Cron задачи
+print_header "4. Удаление Cron задачи бекапа"
+if crontab -l 2>/dev/null | grep -q "$CLIENT_NAME"; then
+    crontab -l 2>/dev/null | grep -v "$CLIENT_NAME" | crontab -
+    print_success "Cron задача удалена"
+else
+    print_warning "Cron задача не найдена"
+fi
+
+# 5. Удаление файлов
+print_header "5. Удаление файлов"
 rm -rf "$DEPLOY_DIR"
 print_success "Директория удалена"
 

@@ -29,7 +29,8 @@ cd miniapps-business/scripts
 sudo bash setup_server.sh
 ```
 
-Скрипт установит:
+Скрипт спросит у вас часовой пояс и установит:
+- ✅ Системный часовой пояс (для cron)
 - ✅ Node.js 20 LTS
 - ✅ PM2
 - ✅ PostgreSQL
@@ -37,6 +38,8 @@ sudo bash setup_server.sh
 - ✅ Certbot (SSL)
 - ✅ Swap 2GB
 - ✅ Оптимизации Nginx
+
+> **Важно:** Выбранный часовой пояс сохраняется в `/etc/miniapps/config` и автоматически применяется ко всем Mini Apps при деплое.
 
 ### 2. Деплой нового Mini App
 
