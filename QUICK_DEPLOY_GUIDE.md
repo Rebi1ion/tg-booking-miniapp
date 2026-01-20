@@ -4,6 +4,29 @@
 
 ---
 
+## 🤖 АВТОМАТИЧЕСКИЙ ДЕПЛОЙ (рекомендуется)
+
+Для автоматизации всего процесса используйте скрипты из папки `scripts/`:
+
+```bash
+# 1. Первоначальная настройка сервера (один раз)
+sudo bash scripts/setup_server.sh
+
+# 2. Деплой нового Mini App
+sudo bash scripts/deploy_miniapp.sh
+```
+
+Скрипты автоматически:
+- ✅ Создадут PostgreSQL базу данных
+- ✅ Настроят PM2 с лимитами памяти
+- ✅ Создадут конфиг Nginx
+- ✅ Получат SSL сертификат
+- ✅ Запустят приложение
+
+> **Подробнее:** См. [scripts/README.md](scripts/README.md)
+
+---
+
 ## 📋 Чек-лист до начала работы
 
 Перед началом получите от клиента:
@@ -13,10 +36,11 @@
 | Название бизнеса | "Барбершоп TopStyle" | `shopConfig.ts` |
 | Telegram ID админа | 123456789 | `shopConfig.ts` + `server/.env` |
 | Часовой пояс | Europe/Moscow | `shopConfig.ts` + `server/.env` |
+| Домен | miniapp.topstyle.com | DNS + Nginx |
 
 ---
 
-## 🚀 Этап 1: Подготовка окружения (5 мин)
+## 🚀 Этап 1: Подготовка сервера (10 мин)
 
 ### 1.1. Подключиться к серверу
 
@@ -24,26 +48,26 @@
 ssh root@IP_СЕРВЕРА
 ```
 
-### 1.2. Создать директорию для нового клиента
+### 1.2. Первоначальная настройка (ОДИН РАЗ)
 
-> **Рекомендация**: Создавайте отдельную папку для каждого клиента
-
-```bash
-cd /var/www
-mkdir -p clients/НАЗВАНИЕ_КЛИЕНТА
-cd clients/НАЗВАНИЕ_КЛИЕНТА
-```
-
-### 1.3. Клонировать репозиторий
+> **Если сервер новый**, выполните настройку:
 
 ```bash
-git clone https://github.com/YOUR_REPO/tg-miniapp.git .
+# Скачать проект
+git clone https://github.com/YOUR_REPO/tg-miniapp.git /opt/miniapps-template
+cd /opt/miniapps-template/scripts
+
+# Запустить настройку сервера
+sudo bash setup_server.sh
 ```
 
-> **Или скопировать с мастер-копии** (если есть чистая копия на сервере):
-> ```bash
-> cp -r /var/www/tg-miniapp-template/* .
-> ```
+Скрипт установит:
+- Node.js 20 LTS
+- PM2
+- PostgreSQL
+- Nginx
+- Certbot
+- Swap 2GB
 
 ---
 
@@ -60,82 +84,77 @@ git clone https://github.com/YOUR_REPO/tg-miniapp.git .
 ```
 /mybots → @topstyle_booking_bot → Bot Settings → Menu Button → Configure
 ```
-Бесплатные поддомены: https://freedns.afraid.org
 - URL: `https://miniapp.topstyle.com` (ваш домен)
 - Title: `📅 Записаться`
 
+> **Бесплатные поддомены:** https://freedns.afraid.org
+
 ---
 
-## ⚙️ Этап 3: Конфигурация (5 мин)
+## ⚙️ Этап 3: Деплой нового клиента (5 мин)
 
-### 3.1. Frontend конфиг: `src/config/shopConfig.ts`
-
-Откройте файл и измените значения:
+### Вариант A: Автоматический (рекомендуется)
 
 ```bash
-nano src/config/shopConfig.ts
+cd /opt/miniapps-template/scripts
+sudo bash deploy_miniapp.sh
 ```
 
-**Минимальные изменения:**
+Следуйте интерактивным подсказкам. Скрипт всё сделает автоматически!
 
-```typescript
-export const shopConfig: ShopConfig = {
-  // === ОСНОВНОЕ ===
-  appName: "Барбershop TopStyle",              // ← Название
-  description: "Стильные стрижки для мужчин",   // ← Описание
-  timezone: "Europe/Moscow",                    // ← Часовой пояс
+### Вариант B: Ручной
 
-  // === АДМИНЫ ===
-  adminIds: [123456789],                        // ← Telegram ID клиента
-
-  // === ОПЛАТА ===
-  payment: {
-    enabled: true,                              // ← Включить/выключить
-    requirePrepayment: false,                   // ← Требовать предоплату?
-  },
-
-  // === БРЕНДИНГ ===
-  branding: {
-    welcomeMessage: "Добро пожаловать в TopStyle!",
-  },
-
-  // === API (ВАЖНО!) ===
-  apiUrl: "https://api.topstyle.com/api",       // ← Домен API
-
-  // === РАСПИСАНИЕ ===
-  bookingDefaults: {
-    startHour: 10,                              // ← Начало рабочего дня
-    endHour: 21,                                // ← Конец рабочего дня
-    intervalMinutes: 30,
-  },
-};
-```
-
-### 3.2. Backend конфиг: `server/.env`
+#### 3.1. Создать директорию и скопировать проект
 
 ```bash
-cp server/.env.example server/.env
-nano server/.env
+mkdir -p /var/www/clients/topstyle
+cp -r /opt/miniapps-template/* /var/www/clients/topstyle/
+cd /var/www/clients/topstyle
+rm -rf .git node_modules server/node_modules
+```
+
+#### 3.2. Создать PostgreSQL базу данных
+
+```bash
+# Генерируем пароль
+DB_PASSWORD=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 16)
+echo "Password: $DB_PASSWORD"
+
+# Создаем БД
+sudo -u postgres psql << EOF
+CREATE USER miniapp_topstyle WITH PASSWORD '$DB_PASSWORD';
+CREATE DATABASE miniapp_topstyle OWNER miniapp_topstyle;
+GRANT ALL PRIVILEGES ON DATABASE miniapp_topstyle TO miniapp_topstyle;
+EOF
+```
+
+#### 3.3. Настроить Backend
+
+```bash
+cd server
+cp .env.example .env
+nano .env
 ```
 
 **Заполнить:**
 
 ```env
 PORT=3000
-DATABASE_URL="file:./dev.db"
+
+# DATABASE (PostgreSQL)
+DATABASE_URL="postgresql://miniapp_topstyle:ПАРОЛЬ@localhost:5432/miniapp_topstyle"
+
 TIMEZONE="Europe/Moscow"
 
-# Telegram Bot (ОБЯЗАТЕЛЬНО)
+# Telegram Bot
 TELEGRAM_BOT_TOKEN="7123456789:AAHxxxxxxxxxxxxxxxxx"
 
-# Frontend URL
+# URLs
 FRONTEND_URL="https://miniapp.topstyle.com"
-
-# Админы (через запятую)
-ADMIN_IDS="123456789"
-
-# MiniApp URL (для кнопок в боте)
 MINIAPP_URL="https://miniapp.topstyle.com"
+
+# Админы
+ADMIN_IDS="123456789"
 
 # Платежи (опционально)
 YOOKASSA_SHOP_ID=""
@@ -146,6 +165,26 @@ PAYMENT_PROVIDER_TOKEN=""
 MAX_PENDING_BOOKINGS_PER_USER=3
 AUTO_CANCEL_UNPAID_MINUTES=30
 RATE_LIMIT_REQUESTS_PER_MINUTE=60
+```
+
+#### 3.4. Frontend конфиг
+
+```bash
+cd ..
+nano src/config/shopConfig.ts
+```
+
+**Изменить:**
+
+```typescript
+export const shopConfig: ShopConfig = {
+  appName: "Барбершоп TopStyle",
+  description: "Стильные стрижки для мужчин",
+  timezone: "Europe/Moscow",
+  adminIds: [123456789],
+  apiUrl: "https://api.topstyle.com/api",
+  // ...
+};
 ```
 
 ---
@@ -174,7 +213,7 @@ npm run build
 ### 5.1. Создать конфиг
 
 ```bash
-sudo nano /etc/nginx/sites-available/CLIENT_NAME
+sudo nano /etc/nginx/sites-available/topstyle
 ```
 
 **Вставить (заменить домены):**
@@ -206,12 +245,22 @@ server {
     listen 80;
     server_name api.topstyle.com;
 
+    # Rate limiting (защита от DDoS)
+    limit_req zone=api_limit burst=20 nodelay;
+    limit_conn conn_limit 10;
+
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /health {
+        limit_req off;
+        proxy_pass http://127.0.0.1:3000/health;
     }
 }
 ```
@@ -219,7 +268,7 @@ server {
 ### 5.2. Активировать и проверить
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/CLIENT_NAME /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/topstyle /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -234,21 +283,45 @@ sudo certbot --nginx -d miniapp.topstyle.com -d api.topstyle.com
 
 ## 🚀 Этап 6: Запуск (2 мин)
 
-### 6.1. Обновить ecosystem.config.cjs для уникального имени
+### 6.1. Обновить ecosystem.config.cjs
 
 ```bash
 nano ecosystem.config.cjs
 ```
 
-Измените `name` на уникальное:
+**Изменить на:**
 
 ```javascript
-name: 'miniapp-topstyle',  // Уникальное имя для PM2
+module.exports = {
+    apps: [{
+        name: 'miniapp-topstyle',  // Уникальное имя!
+        cwd: './server',
+        script: 'npx',
+        args: 'ts-node src/index.ts',
+        interpreter: 'none',
+        
+        // Лимиты памяти
+        max_memory_restart: '300M',
+        
+        env: {
+            NODE_ENV: 'production',
+            NODE_OPTIONS: '--max-old-space-size=256',
+        },
+        
+        autorestart: true,
+        max_restarts: 10,
+        restart_delay: 4000,
+        
+        log_file: './logs/backend.log',
+        error_file: './logs/backend-error.log',
+    }],
+};
 ```
 
-### 6.2. Запустить через PM2
+### 6.2. Создать папку логов и запустить
 
 ```bash
+mkdir -p logs
 pm2 start ecosystem.config.cjs
 pm2 save
 ```
@@ -296,10 +369,28 @@ git pull
 # Пересобрать
 npm install
 npm run build
-cd server && npm install && cd ..
+cd server && npm install && npx prisma generate && cd ..
 
 # Перезапустить
 pm2 restart miniapp-CLIENT_NAME
+```
+
+---
+
+## 🗄️ Команды PostgreSQL
+
+```bash
+# Подключиться к БД
+sudo -u postgres psql -d miniapp_topstyle
+
+# Список всех баз
+sudo -u postgres psql -c "\l" | grep miniapp
+
+# Бекап
+pg_dump -U postgres miniapp_topstyle > backup_$(date +%Y%m%d).sql
+
+# Восстановление
+psql -U postgres miniapp_topstyle < backup.sql
 ```
 
 ---
@@ -313,6 +404,7 @@ pm2 restart miniapp-CLIENT_NAME
 | Нет доступа к админке | Проверить `adminIds` в обоих файлах конфига |
 | Бот не отвечает | Проверить `TELEGRAM_BOT_TOKEN` в `server/.env` |
 | CORS ошибка | Проверить `FRONTEND_URL` в `server/.env` |
+| Database error | Проверить `DATABASE_URL` и подключение к PostgreSQL |
 
 ---
 
@@ -323,26 +415,45 @@ pm2 restart miniapp-CLIENT_NAME
 └── topstyle/                           # Директория клиента
     ├── src/config/shopConfig.ts        # ⭐ Главный конфиг
     ├── server/.env                     # ⭐ Переменные сервера
-    ├── server/prisma/dev.db            # SQLite база данных
+    ├── server/prisma/schema.prisma     # Схема БД (PostgreSQL)
     ├── public/logo.png                 # Логотип
     ├── dist/                           # Собранный frontend
+    ├── logs/                           # Логи PM2
     └── ecosystem.config.cjs            # PM2 конфиг
+```
+
+PostgreSQL базы данных хранятся централизованно:
+```
+PostgreSQL Server (localhost:5432)
+├── miniapp_topstyle        # БД клиента 1
+├── miniapp_hairsalon       # БД клиента 2
+└── miniapp_beautycenter    # БД клиента 3
 ```
 
 ---
 
 ## 🎯 Итого: Минимальное время развертывания
 
-| Этап | Время |
-|------|-------|
-| Подготовка окружения | 5 мин |
-| Создание бота | 3 мин |
-| Конфигурация | 5 мин |
-| Установка и сборка | 3 мин |
-| Настройка Nginx + SSL | 5 мин |
-| Запуск и проверка | 4 мин |
-| **Итого** | **~25 мин** |
+| Этап | Ручной | Автоматический |
+|------|--------|----------------|
+| Настройка сервера | 15 мин | **5 мин** |
+| Создание бота | 3 мин | 3 мин |
+| Деплой клиента | 15 мин | **5 мин** |
+| Проверка | 2 мин | 2 мин |
+| **Итого** | **~35 мин** | **~15 мин** |
 
 ---
 
-👨‍💻 **Совет**: Создайте скрипт `setup_new_client.sh` для автоматизации рутинных шагов!
+## 📈 Масштабирование
+
+| RAM | Max Mini Apps | PostgreSQL БД |
+|-----|---------------|---------------|
+| 2 GB | 5-7 | 5-7 |
+| 4 GB | 12-15 | 12-15 |
+| 8 GB | 25-30 | 25-30 |
+
+> **Мониторинг:** `pm2 monit` и `bash scripts/status_miniapps.sh`
+
+---
+
+👨‍💻 **Совет**: Используйте автоматические скрипты из папки `scripts/` для ускорения деплоя!
