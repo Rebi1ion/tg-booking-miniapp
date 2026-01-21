@@ -381,18 +381,22 @@ mkdir -p "$DEPLOY_DIR/backups"
 # Добавляем cron задачу (ежедневно в 3:00)
 CRON_JOB="0 3 * * * $DEPLOY_DIR/server/scripts/backup.sh $CLIENT_NAME >> /var/log/miniapp-backups.log 2>&1"
 
-# Проверяем, есть ли уже такая задача
-if crontab -l 2>/dev/null | grep -q "$CLIENT_NAME"; then
+# Проверяем, есть ли уже такая задача для этого клиента
+if crontab -l 2>/dev/null | grep -F "$DEPLOY_DIR/server/scripts/backup.sh $CLIENT_NAME" >/dev/null; then
     print_warning "Cron задача для $CLIENT_NAME уже существует"
 else
     # Добавляем задачу
     (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
-    print_success "Cron задача добавлена: ежедневный бекап в 03:00"
+    if [ $? -eq 0 ]; then
+        print_success "Cron задача добавлена: ежедневный бекап в 03:00"
+    else
+        print_error "Ошибка при добавлении cron задачи"
+    fi
 fi
 
 # Показываем текущие cron задачи
 print_info "Текущие cron задачи:"
-crontab -l 2>/dev/null | grep miniapp || echo "  (нет задач miniapp)"
+crontab -l 2>/dev/null | grep "backup.sh" || echo "  (нет задач backup)"
 
 # ============================================================================
 # ГОТОВО!

@@ -227,8 +227,35 @@ fi
 # ============================================================================
 print_header "5. Оптимизация Nginx"
 
+# Проверяем, включен ли gzip в основном конфиге
+GZIP_ENABLED=$(grep -r "^\s*gzip\s\+on" /etc/nginx/nginx.conf /etc/nginx/conf.d/*.conf 2>/dev/null | wc -l)
+
 # Создаем оптимизированную конфигурацию
-cat > /etc/nginx/conf.d/optimization.conf << 'EOF'
+if [ "$GZIP_ENABLED" -gt 0 ]; then
+    # gzip уже включен, не дублируем
+    cat > /etc/nginx/conf.d/optimization.conf << 'EOF'
+# Rate limiting zones
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=20r/s;
+limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
+# Gzip compression (уже включен глобально, настраиваем детали)
+gzip_comp_level 5;
+gzip_min_length 256;
+gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+# Proxy buffers
+proxy_buffer_size 128k;
+proxy_buffers 4 256k;
+proxy_busy_buffers_size 256k;
+
+# Timeouts
+proxy_connect_timeout 60s;
+proxy_send_timeout 60s;
+proxy_read_timeout 60s;
+EOF
+else
+    # gzip не включен, включаем
+    cat > /etc/nginx/conf.d/optimization.conf << 'EOF'
 # Rate limiting zones
 limit_req_zone $binary_remote_addr zone=api_limit:10m rate=20r/s;
 limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
@@ -249,6 +276,7 @@ proxy_connect_timeout 60s;
 proxy_send_timeout 60s;
 proxy_read_timeout 60s;
 EOF
+fi
 
 # Проверяем конфигурацию
 nginx -t && systemctl reload nginx
