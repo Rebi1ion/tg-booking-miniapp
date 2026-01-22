@@ -377,10 +377,13 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
                             </h3>
                             <Calendar
                                 mode="single"
+                                required
                                 selected={selectedDate}
                                 onSelect={(date) => {
-                                    setSelectedDate(date);
-                                    setSelectedTime('');
+                                    if (date) {
+                                        setSelectedDate(date);
+                                        setSelectedTime('');
+                                    }
                                 }}
                                 disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
                                 className="rounded-md border"
