@@ -163,5 +163,46 @@ router.patch('/:id/link-telegram', async (req, res) => {
     }
 });
 
+// GET /api/masters/:id/bookings - Get master's bookings for a specific date
+router.get('/:id/bookings', async (req, res) => {
+    const { id } = req.params;
+    const { date } = req.query; // Expected format: YYYY-MM-DD
+    console.log(`GET /api/masters/${id}/bookings hit, date: ${date}`);
+
+    try {
+        let whereClause: any = {
+            master_id: id,
+            status: { not: 'cancelled' }
+        };
+
+        // If date is provided, filter by that date
+        if (date && typeof date === 'string') {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            whereClause.start_time = {
+                gte: startOfDay,
+                lte: endOfDay
+            };
+        }
+
+        const bookings = await prisma.booking.findMany({
+            where: whereClause,
+            include: {
+                service: true,
+                user: true
+            },
+            orderBy: { start_time: 'asc' }
+        });
+
+        res.json(bookings);
+    } catch (error: any) {
+        console.error(`GET /api/masters/${id}/bookings error:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;
 
