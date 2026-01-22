@@ -63,8 +63,9 @@ export const shopConfig: ShopConfig = {
   },
 
   // ----- API URL -----
-  // Change this to your production URL when deploying
-  apiUrl: "https://api-tg-miniapp.mooo.com:9444/api",
+  // Автоматически берётся из VITE_API_URL при сборке
+  // Для локальной разработки создайте .env файл с VITE_API_URL
+  apiUrl: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
 
   // ----- BOOKING DEFAULTS -----
   bookingDefaults: {

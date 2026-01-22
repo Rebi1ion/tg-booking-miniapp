@@ -76,6 +76,12 @@ fi
 # Admin IDs
 read -p "Admin Telegram IDs (через запятую): " ADMIN_IDS
 
+# Payment Provider Token (для Telegram Payments)
+read -p "Payment Provider Token (от YooKassa, получить в @BotFather): " PAYMENT_PROVIDER_TOKEN
+if [ -z "$PAYMENT_PROVIDER_TOKEN" ]; then
+    print_warning "Payment Provider Token не указан, оплата через Telegram не будет работать"
+fi
+
 # Путь к исходникам
 read -p "Путь к папке с проектом (где вы клонировали репозиторий): " SOURCE_PATH
 if [ ! -d "$SOURCE_PATH" ]; then
@@ -183,6 +189,15 @@ TELEGRAM_BOT_TOKEN=$BOT_TOKEN
 MINIAPP_URL=https://$FRONTEND_DOMAIN
 ADMIN_IDS=$ADMIN_IDS
 
+# ===== PAYMENTS (YooKassa) =====
+YOOKASSA_SHOP_ID=1235106
+YOOKASSA_SECRET_KEY=test_i4hsiG1KeC6_XdOyWe6vdual279DDNWm_yyaTzBgfEo
+PAYMENT_PROVIDER_TOKEN=$PAYMENT_PROVIDER_TOKEN
+
+# ===== BOOKING LIMITS =====
+MAX_PENDING_BOOKINGS_PER_USER=3
+AUTO_CANCEL_UNPAID_MINUTES=30
+
 # ===== RATE LIMITING =====
 RATE_LIMIT_REQUESTS_PER_MINUTE=60
 EOF
@@ -214,7 +229,7 @@ cd "$DEPLOY_DIR"
 
 # Создаем .env для фронтенда
 cat > .env << EOF
-VITE_API_URL=https://$API_DOMAIN
+VITE_API_URL=https://$API_DOMAIN/api
 EOF
 
 # Устанавливаем зависимости и собираем
