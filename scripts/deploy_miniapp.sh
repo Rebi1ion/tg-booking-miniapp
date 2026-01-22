@@ -318,11 +318,11 @@ server {
     listen 80;
     server_name $API_DOMAIN;
 
-    # Rate limiting
-    limit_req zone=api_limit burst=20 nodelay;
-    limit_conn conn_limit 10;
-
+    # Rate limiting (применяется к location /)
     location / {
+        limit_req zone=api_limit burst=20 nodelay;
+        limit_conn conn_limit 10;
+        
         proxy_pass http://127.0.0.1:$BACKEND_PORT;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
@@ -331,10 +331,8 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
-    # Health check (no rate limit)
+    # Health check (без rate limiting)
     location /health {
-        limit_req off;
-        limit_conn off;
         proxy_pass http://127.0.0.1:$BACKEND_PORT/health;
     }
 }
