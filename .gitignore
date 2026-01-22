@@ -26,3 +26,10 @@ dist-ssr
 .env
 /server/.env
 github token.txt
+
+# Database
+server/prisma/*.db
+server/prisma/*.db-journal
+server/prisma/prisma/
+*.db
+*.db-journal
