@@ -6,22 +6,30 @@ module.exports = {
         {
             name: 'miniapp-backend',
             cwd: './server',
-            script: 'npx',
-            args: 'ts-node src/index.ts',
-            interpreter: 'none',
+            script: 'dist/index.js',  // Используем скомпилированный JS
+            interpreter: 'node',
+            
+            // Лимиты памяти
+            max_memory_restart: '200M',
+            
             env: {
                 NODE_ENV: 'production',
             },
-            // Restart on crash
+            
+            // Автоперезапуск
             autorestart: true,
             max_restarts: 10,
-            // Watch for changes (disable in production)
-            watch: false,
-            // Logs
+            restart_delay: 4000,
+            
+            // Graceful shutdown
+            kill_timeout: 5000,
+            
+            // Логи
             log_file: './logs/backend.log',
             out_file: './logs/backend-out.log',
             error_file: './logs/backend-error.log',
             log_date_format: 'YYYY-MM-DD HH:mm:ss',
+            merge_logs: true,
         },
     ],
 };

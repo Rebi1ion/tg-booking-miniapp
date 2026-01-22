@@ -199,7 +199,11 @@ npm install
 npx prisma generate
 npx prisma db push
 
-print_success "База данных инициализирована"
+# Компилируем TypeScript в JavaScript (экономия памяти!)
+print_info "Компиляция TypeScript..."
+npm run build
+
+print_success "База данных инициализирована, сервер скомпилирован"
 
 # ============================================================================
 # 4. НАСТРОЙКА FRONTEND
@@ -233,16 +237,14 @@ module.exports = {
         {
             name: 'miniapp-$CLIENT_NAME',
             cwd: './server',
-            script: 'npx',
-            args: 'ts-node src/index.ts',
-            interpreter: 'none',
+            script: 'dist/index.js',  // Скомпилированный JS (экономия памяти!)
+            interpreter: 'node',
             
-            // Лимиты памяти
-            max_memory_restart: '300M',
+            // Лимиты памяти (для сервера 2GB RAM)
+            max_memory_restart: '200M',
             
             env: {
                 NODE_ENV: 'production',
-                NODE_OPTIONS: '--max-old-space-size=256',
             },
             
             // Автоперезапуск
