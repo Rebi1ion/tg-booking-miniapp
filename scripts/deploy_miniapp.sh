@@ -59,6 +59,10 @@ if [ -z "$FRONTEND_DOMAIN" ] || [ -z "$API_DOMAIN" ]; then
     exit 1
 fi
 
+# Название бизнеса (для отображения в Mini App)
+read -p "Название бизнеса (например: Beauty Salon): " APP_NAME
+APP_NAME=${APP_NAME:-"Мой бизнес"}
+
 # Порт для бекенда (автовыбор свободного)
 DEFAULT_PORT=3000
 while netstat -tuln | grep -q ":$DEFAULT_PORT "; do
@@ -110,6 +114,7 @@ fi
 
 echo ""
 print_header "ПОДТВЕРЖДЕНИЕ"
+echo "Название:         $APP_NAME"
 echo "Клиент:           $CLIENT_NAME"
 echo "Директория:       $DEPLOY_DIR"
 echo "Фронтенд:         https://$FRONTEND_DOMAIN"
@@ -227,9 +232,16 @@ print_header "4. Сборка Frontend"
 
 cd "$DEPLOY_DIR"
 
-# Создаем .env для фронтенда
+# Создаем .env для фронтенда (Vite переменные)
 cat > .env << EOF
+# API URL
 VITE_API_URL=https://$API_DOMAIN/api
+
+# App Settings
+VITE_APP_NAME=$APP_NAME
+VITE_TIMEZONE=$TIMEZONE
+VITE_ADMIN_IDS=$ADMIN_IDS
+VITE_WELCOME_MESSAGE=Добро пожаловать в $APP_NAME!
 EOF
 
 # Устанавливаем зависимости и собираем

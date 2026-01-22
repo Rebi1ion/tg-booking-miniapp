@@ -42,14 +42,21 @@ export interface ShopConfig {
 // YOUR CONFIGURATION - Edit the values below
 // ============================================================================
 
+// Parse admin IDs from env (comma-separated string to number array)
+const parseAdminIds = (envValue: string | undefined): number[] => {
+  if (!envValue) return [];
+  return envValue.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+};
+
 export const shopConfig: ShopConfig = {
   // ----- BASIC INFO -----
-  appName: "Elite Beauty Spa",
-  timezone: "Europe/Moscow", // Change for your region
+  // Автоматически берётся из VITE_* при сборке
+  appName: import.meta.env.VITE_APP_NAME || "Мой бизнес",
+  timezone: import.meta.env.VITE_TIMEZONE || "Europe/Moscow",
 
   // ----- ADMINS -----
-  // Replace with your Telegram User IDs
-  adminIds: [6850941390],
+  // Автоматически берётся из VITE_ADMIN_IDS
+  adminIds: parseAdminIds(import.meta.env.VITE_ADMIN_IDS),
 
   // ----- PAYMENT -----
   payment: {
@@ -59,12 +66,11 @@ export const shopConfig: ShopConfig = {
 
   // ----- BRANDING -----
   branding: {
-    welcomeMessage: "Добро пожаловать! Выберите услугу для записи.",
+    welcomeMessage: import.meta.env.VITE_WELCOME_MESSAGE || "Добро пожаловать! Выберите услугу для записи.",
   },
 
   // ----- API URL -----
   // Автоматически берётся из VITE_API_URL при сборке
-  // Для локальной разработки создайте .env файл с VITE_API_URL
   apiUrl: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
 
   // ----- BOOKING DEFAULTS -----

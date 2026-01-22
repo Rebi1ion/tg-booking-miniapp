@@ -39,6 +39,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
     const [clientName, setClientName] = useState('');
     const [clientPhone, setClientPhone] = useState('');
     const [isPaid, setIsPaid] = useState(false);
+    const [bookedSlots, setBookedSlots] = useState<string[]>([]); // Занятые слоты
 
     const [step, setStep] = useState(0); // 0: Branch, 1: Service, 2: Master, 3: DateTime, 4: Client Info
 
@@ -87,6 +88,62 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
         };
         fetchBranchData();
     }, [selectedBranch]);
+
+    // Fetch booked slots when master and date change
+    useEffect(() => {
+        if (!selectedMaster || !selectedDate || !selectedService) {
+            setBookedSlots([]);
+            return;
+        }
+
+        const fetchBookedSlots = async () => {
+            try {
+                const dateStr = format(selectedDate, 'yyyy-MM-dd');
+                const res = await fetch(
+                    `${API_URL}/masters/${selectedMaster.id}/bookings?date=${dateStr}`,
+                    { headers: { 'ngrok-skip-browser-warning': 'true' } }
+                );
+                const bookings = await res.json();
+
+                if (Array.isArray(bookings)) {
+                    // Собираем все занятые временные слоты
+                    const occupied: string[] = [];
+                    const serviceDuration = selectedService.duration_minutes;
+                    const interval = selectedMaster.slot_interval || 30;
+
+                    bookings.forEach((booking: any) => {
+                        if (booking.status === 'cancelled') return;
+
+                        const start = new Date(booking.start_time);
+                        const end = new Date(booking.end_time);
+
+                        // Добавляем все слоты которые перекрываются с этой бронью
+                        let slotTime = new Date(selectedDate);
+                        slotTime.setHours(selectedMaster.start_hour || 10, 0, 0, 0);
+                        const endHour = selectedMaster.end_hour || 20;
+
+                        while (slotTime.getHours() < endHour) {
+                            const slotEnd = addMinutes(slotTime, serviceDuration);
+
+                            // Проверяем пересечение: слот пересекается с бронью если
+                            // начало слота < конец брони И конец слота > начало брони
+                            if (slotTime < end && slotEnd > start) {
+                                occupied.push(format(slotTime, 'HH:mm'));
+                            }
+
+                            slotTime = addMinutes(slotTime, interval);
+                        }
+                    });
+
+                    setBookedSlots([...new Set(occupied)]); // Убираем дубликаты
+                }
+            } catch (error) {
+                console.error('Failed to fetch booked slots:', error);
+            }
+        };
+
+        fetchBookedSlots();
+    }, [selectedMaster, selectedDate, selectedService]);
 
     // Generate time slots
     const generateTimeSlots = () => {
@@ -176,8 +233,8 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <Card className="w-full max-w-md my-4">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 pt-8 overflow-y-auto">
+            <Card className="w-full max-w-md mb-8 max-h-[90vh] overflow-y-auto">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-lg">Новая запись</CardTitle>
                     <Button variant="ghost" size="sm" onClick={onClose}>
@@ -333,20 +390,29 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
                                 <h4 className="text-sm font-medium flex items-center gap-2">
                                     <Clock className="h-4 w-4" />
                                     Время
+                                    {bookedSlots.length > 0 && (
+                                        <span className="text-xs text-muted-foreground font-normal">(серые — занято)</span>
+                                    )}
                                 </h4>
                                 <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
-                                    {generateTimeSlots().map(time => (
-                                        <button
-                                            key={time}
-                                            className={`p-2 text-sm border rounded transition-colors ${selectedTime === time
-                                                ? 'border-primary bg-primary text-primary-foreground'
-                                                : 'hover:bg-muted'
-                                                }`}
-                                            onClick={() => setSelectedTime(time)}
-                                        >
-                                            {time}
-                                        </button>
-                                    ))}
+                                    {generateTimeSlots().map(time => {
+                                        const isBooked = bookedSlots.includes(time);
+                                        return (
+                                            <button
+                                                key={time}
+                                                disabled={isBooked}
+                                                className={`p-2 text-sm border rounded transition-colors ${isBooked
+                                                    ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50 line-through'
+                                                    : selectedTime === time
+                                                        ? 'border-primary bg-primary text-primary-foreground'
+                                                        : 'hover:bg-muted'
+                                                    }`}
+                                                onClick={() => !isBooked && setSelectedTime(time)}
+                                            >
+                                                {time}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
