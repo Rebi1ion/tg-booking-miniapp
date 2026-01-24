@@ -14,8 +14,11 @@ export const ServiceSelection = () => {
     const [activeHall, setActiveHall] = useState<string | null>(null);
     const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
+    const subTabsRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(false);
+    const [showSubLeftArrow, setShowSubLeftArrow] = useState(false);
+    const [showSubRightArrow, setShowSubRightArrow] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Separate recommended services (with order_count > 0) and group by category
@@ -65,6 +68,20 @@ export const ServiceSelection = () => {
         setActiveSubcategory(null);
     }, [activeCategory]);
 
+    // Reset category when hall changes (but keep 'recommended' valid)
+    useEffect(() => {
+        if (activeCategory && activeCategory !== 'recommended') {
+            // Check if current category exists in filtered categories
+            const hallServices = activeHall
+                ? services.filter((s: any) => s.hall === activeHall)
+                : services;
+            const hallCategories = [...new Set(hallServices.map((s: any) => s.category || 'Другое'))];
+            if (!hallCategories.includes(activeCategory)) {
+                setActiveCategory('recommended');
+            }
+        }
+    }, [activeHall, services, activeCategory]);
+
     // Get subcategories for current category
     const subcategoriesForCategory = useMemo(() => {
         if (!activeCategory || activeCategory === 'recommended') return [];
@@ -99,6 +116,30 @@ export const ServiceSelection = () => {
             setTimeout(checkScrollArrows, 300);
         }
     };
+
+    // Subcategory scroll functions
+    const checkSubScrollArrows = () => {
+        if (subTabsRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = subTabsRef.current;
+            setShowSubLeftArrow(scrollLeft > 0);
+            setShowSubRightArrow(scrollLeft + clientWidth < scrollWidth - 1);
+        }
+    };
+
+    const scrollSubTabs = (direction: 'left' | 'right') => {
+        if (subTabsRef.current) {
+            const scrollAmount = 150;
+            subTabsRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+            setTimeout(checkSubScrollArrows, 300);
+        }
+    };
+
+    useEffect(() => {
+        checkSubScrollArrows();
+    }, [subcategoriesForCategory]);
 
     // Get services to display based on active category, hall, and subcategory
     const displayServices = useMemo(() => {
@@ -145,7 +186,7 @@ export const ServiceSelection = () => {
         return list;
     }, [activeCategory, activeHall, activeSubcategory, recommendedServices, groupedServices, searchQuery]);
 
-    // All tabs - always include "Ваш выбор" first
+    // All tabs - always include "Ваш выбор" first, filter by activeHall
     const allTabs = useMemo(() => {
         const tabs: { key: string; label: string; icon?: React.ReactNode }[] = [];
 
@@ -156,12 +197,20 @@ export const ServiceSelection = () => {
             icon: <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
         });
 
-        categories.forEach(cat => {
+        // Filter categories by activeHall
+        let filteredCategories = categories;
+        if (activeHall) {
+            const hallServices = services.filter((s: any) => s.hall === activeHall);
+            const hallCategories = [...new Set(hallServices.map((s: any) => s.category || 'Другое'))] as string[];
+            filteredCategories = categories.filter(cat => hallCategories.includes(cat));
+        }
+
+        filteredCategories.forEach(cat => {
             tabs.push({ key: cat, label: cat });
         });
 
         return tabs;
-    }, [categories]);
+    }, [categories, activeHall, services]);
 
     return (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -260,32 +309,59 @@ export const ServiceSelection = () => {
 
             {/* Subcategory Tabs (Per-category) - Show only if subcategories exist for current category */}
             {!searchQuery && subcategoriesForCategory.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide px-1 py-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                    <button
-                        onClick={() => setActiveSubcategory(null)}
-                        className={cn(
-                            "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                            activeSubcategory === null
-                                ? "bg-accent text-accent-foreground"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                        )}
-                    >
-                        Все
-                    </button>
-                    {subcategoriesForCategory.map(sub => (
+                <div className="relative">
+                    {/* Left scroll arrow */}
+                    {showSubLeftArrow && (
                         <button
-                            key={sub}
-                            onClick={() => setActiveSubcategory(sub)}
+                            onClick={() => scrollSubTabs('left')}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-gradient-to-r from-background via-background to-transparent pr-4 h-full flex items-center"
+                        >
+                            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                    )}
+
+                    <div
+                        ref={subTabsRef}
+                        className="flex gap-2 overflow-x-auto scrollbar-hide px-1 py-1"
+                        onScroll={checkSubScrollArrows}
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                        <button
+                            onClick={() => setActiveSubcategory(null)}
                             className={cn(
-                                "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                                activeSubcategory === sub
+                                "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                                activeSubcategory === null
                                     ? "bg-accent text-accent-foreground"
                                     : "bg-muted/50 text-muted-foreground hover:bg-muted"
                             )}
                         >
-                            {sub}
+                            Все
                         </button>
-                    ))}
+                        {subcategoriesForCategory.map(sub => (
+                            <button
+                                key={sub}
+                                onClick={() => setActiveSubcategory(sub)}
+                                className={cn(
+                                    "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all",
+                                    activeSubcategory === sub
+                                        ? "bg-accent text-accent-foreground"
+                                        : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                )}
+                            >
+                                {sub}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Right scroll arrow */}
+                    {showSubRightArrow && (
+                        <button
+                            onClick={() => scrollSubTabs('right')}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-gradient-to-l from-background via-background to-transparent pl-4 h-full flex items-center"
+                        >
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                    )}
                 </div>
             )}
 

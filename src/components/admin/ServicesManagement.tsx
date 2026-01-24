@@ -214,12 +214,12 @@ export const ServicesManagement = () => {
                         />
                     </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-3">
                     <div>
                         <label className="text-xs text-muted-foreground">Категория</label>
                         <Input
                             list="categories-list"
-                            placeholder="Стрижки..."
+                            placeholder="Стрижки, Маникюр..."
                             value={formData.category}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, category: e.target.value })}
                         />
@@ -228,7 +228,7 @@ export const ServicesManagement = () => {
                         <label className="text-xs text-muted-foreground">Подкатегория</label>
                         <Input
                             list="subcategories-list"
-                            placeholder="Женские..."
+                            placeholder="Женские, Мужские..."
                             value={formData.subcategory}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, subcategory: e.target.value })}
                         />
@@ -237,7 +237,7 @@ export const ServicesManagement = () => {
                         <label className="text-xs text-muted-foreground">Зал</label>
                         <Input
                             list="halls-list"
-                            placeholder="Зал 1..."
+                            placeholder="Парикмахерский зал, Косметологический..."
                             value={formData.hall}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, hall: e.target.value })}
                         />
