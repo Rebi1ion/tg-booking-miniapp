@@ -456,4 +456,47 @@ PostgreSQL Server (localhost:5432)
 
 ---
 
+## 📥 Импорт услуг из JSON
+
+Для быстрого добавления услуг используйте импорт из JSON:
+
+### 1. Подготовьте JSON
+
+Используйте промпт из `docs/AI_PROMPT_SERVICES.md` для преобразования фото/текста прайс-листа в JSON.
+
+Или создайте вручную:
+
+```json
+{
+  "services": [
+    {
+      "name": "Стрижка женская",
+      "category": "Стрижки",
+      "duration_minutes": 60,
+      "price": 2500
+    }
+  ],
+  "defaults": {
+    "duration_minutes": 30,
+    "price": 0
+  }
+}
+```
+
+### 2. Импортируйте
+
+```bash
+# Через CLI
+./scripts/import_services.sh CLIENT_NAME services.json
+
+# Или через curl
+curl -X POST https://API_DOMAIN/api/import/services \
+     -H "Content-Type: application/json" \
+     -d @services.json
+```
+
+> **Примечание:** Поля `price`, `duration_minutes`, `description` — необязательные, используются дефолтные значения.
+
+---
+
 👨‍💻 **Совет**: Используйте автоматические скрипты из папки `scripts/` для ускорения деплоя!

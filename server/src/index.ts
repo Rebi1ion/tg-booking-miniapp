@@ -17,6 +17,7 @@ import reportsRoutes from './routes/reports';
 import promotionsRoutes from './routes/promotions';
 import settingsRoutes from './routes/settings';
 import branchesRoutes from './routes/branches';
+import importRoutes from './routes/import';
 import './services/reminderService'; // Root import for cron job
 import './services/botService'; // Telegram bot
 import './services/bookingCleanupService'; // Auto-cancel unpaid bookings
@@ -57,6 +58,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/promotions', promotionsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/branches', branchesRoutes);
+app.use('/api/import', importRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
