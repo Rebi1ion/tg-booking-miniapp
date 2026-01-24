@@ -7,6 +7,8 @@ interface ServiceImport {
     name: string;
     description?: string;
     category?: string;
+    subcategory?: string;
+    hall?: string;
     duration_minutes?: number;
     price?: number;
     is_active?: boolean;
@@ -19,6 +21,8 @@ interface ImportServicesRequest {
         duration_minutes?: number;
         price?: number;
         category?: string;
+        subcategory?: string;
+        hall?: string;
     };
 }
 
@@ -57,6 +61,8 @@ router.post('/services', async (req, res) => {
                 const duration = svc.duration_minutes ?? defaults?.duration_minutes ?? 30;
                 const price = svc.price ?? defaults?.price ?? 0;
                 const category = svc.category ?? defaults?.category ?? 'Без категории';
+                const subcategory = svc.subcategory ?? defaults?.subcategory ?? null;
+                const hall = svc.hall ?? defaults?.hall ?? null;
 
                 // Upsert: create or update by name
                 const existing = await prisma.service.findFirst({
@@ -73,6 +79,8 @@ router.post('/services', async (req, res) => {
                             duration_minutes: duration,
                             price: price,
                             category: category,
+                            subcategory: subcategory,
+                            hall: hall,
                             is_active: svc.is_active ?? existing.is_active
                         }
                     });
@@ -86,6 +94,8 @@ router.post('/services', async (req, res) => {
                             duration_minutes: duration,
                             price: price,
                             category: category,
+                            subcategory: subcategory,
+                            hall: hall,
                             is_active: svc.is_active ?? true
                         }
                     });
@@ -142,8 +152,19 @@ router.get('/template', (req, res) => {
                 name: "Стрижка женская",
                 description: "Стрижка любой сложности с укладкой",
                 category: "Стрижки",
+                subcategory: "Женские",
+                hall: "Зал 1",
                 duration_minutes: 60,
                 price: 2500
+            },
+            {
+                name: "Стрижка мужская",
+                description: "Классическая мужская стрижка",
+                category: "Стрижки",
+                subcategory: "Мужские",
+                hall: "Зал 2",
+                duration_minutes: 30,
+                price: 1000
             },
             {
                 name: "Маникюр классический",
@@ -156,7 +177,9 @@ router.get('/template', (req, res) => {
         defaults: {
             duration_minutes: 30,
             price: 0,
-            category: "Без категории"
+            category: "Без категории",
+            subcategory: null,
+            hall: null
         },
         branch_id: "optional-uuid-of-branch"
     };

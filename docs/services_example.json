@@ -4,12 +4,16 @@
             "name": "Стрижка женская",
             "description": "Стрижка любой сложности с укладкой",
             "category": "Стрижки",
+            "subcategory": "Женские",
+            "hall": "Зал 1",
             "duration_minutes": 60,
             "price": 2500
         },
         {
             "name": "Стрижка мужская",
             "category": "Стрижки",
+            "subcategory": "Мужские",
+            "hall": "Зал 2",
             "duration_minutes": 30,
             "price": 1000
         },
@@ -17,12 +21,14 @@
             "name": "Детская стрижка",
             "description": "Стрижка для детей до 12 лет",
             "category": "Стрижки",
+            "subcategory": "Детские",
             "duration_minutes": 30,
             "price": 800
         },
         {
             "name": "Окрашивание корней",
             "category": "Окрашивание",
+            "subcategory": "Короткие волосы",
             "duration_minutes": 90,
             "price": 3500
         },
@@ -30,6 +36,7 @@
             "name": "Полное окрашивание",
             "description": "Окрашивание по всей длине",
             "category": "Окрашивание",
+            "subcategory": "Длинные волосы",
             "duration_minutes": 180,
             "price": 6000
         },
