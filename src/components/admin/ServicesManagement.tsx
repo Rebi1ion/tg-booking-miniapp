@@ -22,6 +22,8 @@ export const ServicesManagement = () => {
         duration_minutes: 60,
         price: 0,
         category: '',
+        subcategory: '',
+        hall: '',
         image_url: ''
     });
 
@@ -44,7 +46,7 @@ export const ServicesManagement = () => {
     }, []);
 
     const resetForm = () => {
-        setFormData({ name: '', description: '', duration_minutes: 60, price: 0, category: '', image_url: '' });
+        setFormData({ name: '', description: '', duration_minutes: 60, price: 0, category: '', subcategory: '', hall: '', image_url: '' });
         setEditingId(null);
         setIsAdding(false);
     };
@@ -57,6 +59,8 @@ export const ServicesManagement = () => {
             duration_minutes: service.duration_minutes,
             price: service.price,
             category: service.category || '',
+            subcategory: (service as any).subcategory || '',
+            hall: (service as any).hall || '',
             image_url: service.image_url || ''
         });
     };
@@ -70,6 +74,8 @@ export const ServicesManagement = () => {
             duration_minutes: formData.duration_minutes,
             price: formData.price,
             category: formData.category || null,
+            subcategory: formData.subcategory || null,
+            hall: formData.hall || null,
             image_url: formData.image_url || null,
             is_active: true
         };
@@ -209,11 +215,54 @@ export const ServicesManagement = () => {
                                 />
                             </div>
                         </div>
-                        <Input
-                            placeholder="Категория (например: Стрижки, Маникюр)"
-                            value={formData.category}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, category: e.target.value })}
-                        />
+                        {/* Категория с автокомплитом */}
+                        <div>
+                            <label className="text-xs text-muted-foreground">Категория</label>
+                            <Input
+                                list="categories-list"
+                                placeholder="Стрижки, Маникюр..."
+                                value={formData.category}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, category: e.target.value })}
+                            />
+                            <datalist id="categories-list">
+                                {[...new Set(services.map(s => s.category).filter(Boolean))].map(cat => (
+                                    <option key={cat} value={cat!} />
+                                ))}
+                            </datalist>
+                        </div>
+
+                        {/* Подкатегория с автокомплитом */}
+                        <div>
+                            <label className="text-xs text-muted-foreground">Подкатегория (опционально)</label>
+                            <Input
+                                list="subcategories-list"
+                                placeholder="Женские, Мужские..."
+                                value={formData.subcategory}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, subcategory: e.target.value })}
+                            />
+                            <datalist id="subcategories-list">
+                                {[...new Set(services.map(s => (s as any).subcategory).filter(Boolean))].map(sub => (
+                                    <option key={sub} value={sub!} />
+                                ))}
+                            </datalist>
+                        </div>
+
+                        {/* Зал с автокомплитом */}
+                        <div>
+                            <label className="text-xs text-muted-foreground">Зал (опционально)</label>
+                            <Input
+                                list="halls-list"
+                                placeholder="Зал 1, Зал 2..."
+                                value={formData.hall}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, hall: e.target.value })}
+                            />
+                            <datalist id="halls-list">
+                                {[...new Set(services.map(s => (s as any).hall).filter(Boolean))].map(hall => (
+                                    <option key={hall} value={hall!} />
+                                ))}
+                            </datalist>
+                        </div>
+
                         <Input
                             placeholder="URL изображения"
                             value={formData.image_url}

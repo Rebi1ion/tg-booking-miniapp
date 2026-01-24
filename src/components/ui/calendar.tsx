@@ -50,8 +50,8 @@ function Calendar({
                     "hover:bg-accent hover:text-accent-foreground"
                 ),
 
-                // Selected day styling
-                selected: "bg-primary text-primary-foreground rounded-md shadow-sm",
+                // Selected day styling - apply to the day cell AND the button inside
+                selected: "bg-primary text-primary-foreground rounded-md shadow-sm [&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground",
                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-md",
 
                 // Today - subtle underline instead of background

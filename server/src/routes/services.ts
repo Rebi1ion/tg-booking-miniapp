@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/services
 router.post('/', async (req, res) => {
-    const { name, description, duration_minutes, price, category, image_url, is_active } = req.body;
+    const { name, description, duration_minutes, price, category, subcategory, hall, image_url, is_active } = req.body;
     console.log("POST /api/services hit:", { name, price });
     try {
         const service = await prisma.service.create({
@@ -27,6 +27,8 @@ router.post('/', async (req, res) => {
                 duration_minutes: parseInt(duration_minutes) || 0,
                 price: parseInt(price) || 0,
                 category,
+                subcategory,
+                hall,
                 image_url,
                 is_active: is_active !== undefined ? is_active : true
             }
@@ -91,7 +93,7 @@ router.get('/personalized/:userId', async (req, res) => {
 // PUT /api/services/:id
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, description, duration_minutes, price, category, image_url, is_active } = req.body;
+    const { name, description, duration_minutes, price, category, subcategory, hall, image_url, is_active } = req.body;
     console.log(`PUT /api/services/${id} hit:`, { name });
     try {
         const service = await prisma.service.update({
@@ -102,6 +104,8 @@ router.put('/:id', async (req, res) => {
                 duration_minutes: parseInt(duration_minutes) || 0,
                 price: parseInt(price) || 0,
                 category,
+                subcategory,
+                hall,
                 image_url,
                 is_active
             }

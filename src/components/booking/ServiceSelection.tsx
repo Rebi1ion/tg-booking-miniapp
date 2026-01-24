@@ -11,13 +11,15 @@ import { Star, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 export const ServiceSelection = () => {
     const { services, setService, selectedService } = useAppStore();
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const [activeHall, setActiveHall] = useState<string | null>(null);
+    const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Separate recommended services (with order_count > 0) and group by category
-    const { recommendedServices, categories, groupedServices } = useMemo(() => {
+    const { recommendedServices, categories, groupedServices, halls } = useMemo(() => {
         // 1. Recommended services (with order_count > 0)
         let recommended = services.filter((s: any) => s.order_count > 0);
         // Sort recommended by name
@@ -39,20 +41,38 @@ export const ServiceSelection = () => {
             grouped[cat].sort((a: any, b: any) => a.name.localeCompare(b.name));
         });
 
+        // 5. Get unique halls (global subcategories)
+        const uniqueHalls = [...new Set(services.map((s: any) => s.hall).filter(Boolean))] as string[];
+        uniqueHalls.sort((a, b) => a.localeCompare(b));
+
         return {
             recommendedServices: recommended,
             categories: cats,
-            groupedServices: grouped
+            groupedServices: grouped,
+            halls: uniqueHalls
         };
     }, [services]);
 
     // Set initial category - always start with "Ваш выбор" tab
     useEffect(() => {
         if (!activeCategory) {
-            // Always start with "Ваш выбор" tab
             setActiveCategory('recommended');
         }
     }, [activeCategory]);
+
+    // Reset subcategory when category changes
+    useEffect(() => {
+        setActiveSubcategory(null);
+    }, [activeCategory]);
+
+    // Get subcategories for current category
+    const subcategoriesForCategory = useMemo(() => {
+        if (!activeCategory || activeCategory === 'recommended') return [];
+        const categoryServices = groupedServices[activeCategory] || [];
+        const subs = [...new Set(categoryServices.map((s: any) => s.subcategory).filter(Boolean))] as string[];
+        subs.sort((a, b) => a.localeCompare(b));
+        return subs;
+    }, [activeCategory, groupedServices]);
 
     // Check scroll arrows visibility
     const checkScrollArrows = () => {
@@ -80,7 +100,7 @@ export const ServiceSelection = () => {
         }
     };
 
-    // Get services to display based on active category
+    // Get services to display based on active category, hall, and subcategory
     const displayServices = useMemo(() => {
         let list = [];
 
@@ -90,29 +110,40 @@ export const ServiceSelection = () => {
             list = activeCategory ? (groupedServices[activeCategory] || []) : [];
         }
 
+        // Apply hall filter if selected (global)
+        if (activeHall) {
+            list = list.filter((s: any) => s.hall === activeHall);
+        }
+
+        // Apply subcategory filter if selected (per-category)
+        if (activeSubcategory) {
+            list = list.filter((s: any) => s.subcategory === activeSubcategory);
+        }
+
         // Apply search filter if query exists
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            // If searching, we might want to search across ALL services, or just current category?
-            // "Search everywhere" usually implies searching across all services.
-            // But if specific category is selected, maybe just that category?
-            // Let's search across ALL services if user is searching, ignoring tabs for search results
-            // OR we can keep tabs active. User said "Search everywhere". 
-            // Better UX: If search is active, show results from ALL categories.
-
+            // Search across ALL services if user is searching
             const allServicesList = Object.values(groupedServices).flat();
-            // Remove duplicates if any
             const uniqueServices = Array.from(new Map(allServicesList.map(s => [s.id, s])).values());
 
-            return uniqueServices.filter((s: any) =>
+            let filtered = uniqueServices.filter((s: any) =>
                 s.name.toLowerCase().includes(query) ||
                 (s.description?.toLowerCase() || '').includes(query) ||
-                (s.category?.toLowerCase() || '').includes(query)
+                (s.category?.toLowerCase() || '').includes(query) ||
+                (s.subcategory?.toLowerCase() || '').includes(query)
             );
+
+            // Apply hall filter even in search
+            if (activeHall) {
+                filtered = filtered.filter((s: any) => s.hall === activeHall);
+            }
+
+            return filtered;
         }
 
         return list;
-    }, [activeCategory, recommendedServices, groupedServices, searchQuery]);
+    }, [activeCategory, activeHall, activeSubcategory, recommendedServices, groupedServices, searchQuery]);
 
     // All tabs - always include "Ваш выбор" first
     const allTabs = useMemo(() => {
@@ -146,6 +177,37 @@ export const ServiceSelection = () => {
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
+
+            {/* Hall Tabs (Global subcategories) - Show only if halls exist */}
+            {!searchQuery && halls.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide px-1 py-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <button
+                        onClick={() => setActiveHall(null)}
+                        className={cn(
+                            "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                            activeHall === null
+                                ? "bg-secondary text-secondary-foreground shadow-sm"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                        )}
+                    >
+                        Все залы
+                    </button>
+                    {halls.map(hall => (
+                        <button
+                            key={hall}
+                            onClick={() => setActiveHall(hall)}
+                            className={cn(
+                                "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                                activeHall === hall
+                                    ? "bg-secondary text-secondary-foreground shadow-sm"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                            )}
+                        >
+                            {hall}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Category Tabs with horizontal scroll - Hide tabs if searching */}
             {!searchQuery && allTabs.length > 1 && (
@@ -193,6 +255,37 @@ export const ServiceSelection = () => {
                             <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </button>
                     )}
+                </div>
+            )}
+
+            {/* Subcategory Tabs (Per-category) - Show only if subcategories exist for current category */}
+            {!searchQuery && subcategoriesForCategory.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide px-1 py-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <button
+                        onClick={() => setActiveSubcategory(null)}
+                        className={cn(
+                            "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                            activeSubcategory === null
+                                ? "bg-accent text-accent-foreground"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                        )}
+                    >
+                        Все
+                    </button>
+                    {subcategoriesForCategory.map(sub => (
+                        <button
+                            key={sub}
+                            onClick={() => setActiveSubcategory(sub)}
+                            className={cn(
+                                "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                                activeSubcategory === sub
+                                    ? "bg-accent text-accent-foreground"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                            )}
+                        >
+                            {sub}
+                        </button>
+                    ))}
                 </div>
             )}
 

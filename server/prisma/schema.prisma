@@ -81,6 +81,8 @@ model Service {
   price            Int
   image_url        String?
   category         String?
+  subcategory      String?         // Зависимая подкатегория (Женские/Мужские)
+  hall             String?         // Глобальная подкатегория (Зал 1, Зал 2)
   is_active        Boolean         @default(true)
   created_at       DateTime        @default(now())
   masters          MasterService[]
