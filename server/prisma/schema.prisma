@@ -63,6 +63,7 @@ model Master {
   role          String?
   bio           String?
   is_active     Boolean         @default(true)
+  work_days     String?         @default("1,2,3,4,5")
   start_hour    Int             @default(10)
   end_hour      Int             @default(20)
   slot_interval Int             @default(30)

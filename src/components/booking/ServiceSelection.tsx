@@ -2,9 +2,11 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { shopConfig } from '@/config/shopConfig';
-import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
 export const ServiceSelection = () => {
     const { services, setService, selectedService } = useAppStore();
@@ -12,10 +14,16 @@ export const ServiceSelection = () => {
     const tabsRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Separate recommended services (with order_count > 0) and group by category
     const { recommendedServices, categories, groupedServices } = useMemo(() => {
-        const recommended = services.filter((s: any) => s.order_count > 0);
+        // 1. Recommended services (with order_count > 0)
+        let recommended = services.filter((s: any) => s.order_count > 0);
+        // Sort recommended by name
+        recommended.sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+        // 2. Group all services
         const grouped = services.reduce((acc: Record<string, any[]>, service: any) => {
             const cat = service.category || 'Другое';
             if (!acc[cat]) acc[cat] = [];
@@ -23,7 +31,13 @@ export const ServiceSelection = () => {
             return acc;
         }, {} as Record<string, any[]>);
 
-        const cats = Object.keys(grouped).sort();
+        // 3. Sort categories alphabetically
+        const cats = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+
+        // 4. Sort services within each category alphabetically
+        cats.forEach(cat => {
+            grouped[cat].sort((a: any, b: any) => a.name.localeCompare(b.name));
+        });
 
         return {
             recommendedServices: recommended,
@@ -68,11 +82,37 @@ export const ServiceSelection = () => {
 
     // Get services to display based on active category
     const displayServices = useMemo(() => {
+        let list = [];
+
         if (activeCategory === 'recommended') {
-            return recommendedServices;
+            list = recommendedServices;
+        } else {
+            list = activeCategory ? (groupedServices[activeCategory] || []) : [];
         }
-        return activeCategory ? (groupedServices[activeCategory] || []) : [];
-    }, [activeCategory, recommendedServices, groupedServices]);
+
+        // Apply search filter if query exists
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            // If searching, we might want to search across ALL services, or just current category?
+            // "Search everywhere" usually implies searching across all services.
+            // But if specific category is selected, maybe just that category?
+            // Let's search across ALL services if user is searching, ignoring tabs for search results
+            // OR we can keep tabs active. User said "Search everywhere". 
+            // Better UX: If search is active, show results from ALL categories.
+
+            const allServicesList = Object.values(groupedServices).flat();
+            // Remove duplicates if any
+            const uniqueServices = Array.from(new Map(allServicesList.map(s => [s.id, s])).values());
+
+            return uniqueServices.filter((s: any) =>
+                s.name.toLowerCase().includes(query) ||
+                (s.description?.toLowerCase() || '').includes(query) ||
+                (s.category?.toLowerCase() || '').includes(query)
+            );
+        }
+
+        return list;
+    }, [activeCategory, recommendedServices, groupedServices, searchQuery]);
 
     // All tabs - always include "Ваш выбор" first
     const allTabs = useMemo(() => {
@@ -96,8 +136,19 @@ export const ServiceSelection = () => {
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-xl font-bold text-center">Выберите услугу</h2>
 
-            {/* Category Tabs with horizontal scroll */}
-            {allTabs.length > 1 && (
+            {/* Search Input */}
+            <div className="relative">
+                <Input
+                    placeholder="Поиск услуги..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
+
+            {/* Category Tabs with horizontal scroll - Hide tabs if searching */}
+            {!searchQuery && allTabs.length > 1 && (
                 <div className="relative">
                     {/* Left scroll arrow */}
                     {showLeftArrow && (

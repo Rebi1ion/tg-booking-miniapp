@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/masters
 router.post('/', async (req, res) => {
-    const { name, role, photo_url, bio, start_hour, end_hour, slot_interval, serviceIds } = req.body;
+    const { name, role, photo_url, bio, start_hour, end_hour, slot_interval, work_days, serviceIds } = req.body;
     console.log("POST /api/masters hit:", { name, serviceIds });
     try {
         const master = await prisma.master.create({
@@ -42,7 +42,8 @@ router.post('/', async (req, res) => {
                 bio,
                 start_hour: parseInt(start_hour) || 10,
                 end_hour: parseInt(end_hour) || 20,
-                slot_interval: parseInt(slot_interval) || 30
+                slot_interval: parseInt(slot_interval) || 30,
+                work_days: work_days || "1,2,3,4,5,6,7"
             }
         });
 
@@ -65,7 +66,7 @@ router.post('/', async (req, res) => {
 // PUT /api/masters/:id
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, role, photo_url, bio, start_hour, end_hour, slot_interval, serviceIds } = req.body;
+    const { name, role, photo_url, bio, start_hour, end_hour, slot_interval, work_days, serviceIds } = req.body;
     console.log(`PUT /api/masters/${id} hit:`, { name, serviceIds });
     try {
         const master = await prisma.master.update({
@@ -77,7 +78,8 @@ router.put('/:id', async (req, res) => {
                 bio,
                 start_hour: parseInt(start_hour) || 10,
                 end_hour: parseInt(end_hour) || 20,
-                slot_interval: parseInt(slot_interval) || 30
+                slot_interval: parseInt(slot_interval) || 30,
+                work_days: work_days || "1,2,3,4,5,6,7"
             }
         });
 

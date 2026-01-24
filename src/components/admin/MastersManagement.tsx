@@ -19,6 +19,7 @@ export const MastersManagement = () => {
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
+    const [serviceSearchQuery, setServiceSearchQuery] = useState('');
 
     // Form state
     const [formData, setFormData] = useState({
@@ -30,6 +31,7 @@ export const MastersManagement = () => {
         end_hour: '20',
         slot_interval: '30',
         telegram_id: '',
+        work_days: '1,2,3,4,5,6,7', // Default to all days
         selectedServices: [] as string[]
     });
 
@@ -57,7 +59,18 @@ export const MastersManagement = () => {
     }, []);
 
     const resetForm = () => {
-        setFormData({ name: '', role: '', photo_url: '', bio: '', start_hour: '10', end_hour: '20', slot_interval: '30', telegram_id: '', selectedServices: [] });
+        setFormData({
+            name: '',
+            role: '',
+            photo_url: '',
+            bio: '',
+            start_hour: '10',
+            end_hour: '20',
+            slot_interval: '30',
+            telegram_id: '',
+            work_days: '1,2,3,4,5,6,7',
+            selectedServices: []
+        });
         setEditingId(null);
         setIsAdding(false);
     };
@@ -73,6 +86,7 @@ export const MastersManagement = () => {
             end_hour: (master.end_hour ?? 20).toString(),
             slot_interval: (master.slot_interval ?? 30).toString(),
             telegram_id: (master as any).telegram_id?.toString() || '',
+            work_days: (master as any).work_days || '1,2,3,4,5,6,7',
             selectedServices: master.services?.map(s => s.id) || []
         });
     };
@@ -98,6 +112,7 @@ export const MastersManagement = () => {
             start_hour: start,
             end_hour: end,
             slot_interval: interval,
+            work_days: formData.work_days,
             serviceIds: formData.selectedServices
         };
 
@@ -164,6 +179,14 @@ export const MastersManagement = () => {
             console.error("Failed to delete master", error);
             alert(`Ошибка при удалении: ${error.message}`);
         }
+    };
+
+    const toggleDay = (dayId: string) => {
+        const currentDays = formData.work_days ? formData.work_days.split(',') : [];
+        const newDays = currentDays.includes(dayId)
+            ? currentDays.filter(d => d !== dayId)
+            : [...currentDays, dayId];
+        setFormData({ ...formData, work_days: newDays.join(',') });
     };
 
     const toggleService = (serviceId: string) => {
@@ -272,23 +295,59 @@ export const MastersManagement = () => {
                             </div>
                         </div>
 
-                        {/* Services selection */}
+                        {/* Working Days */}
                         <div>
-                            <p className="text-sm text-muted-foreground mb-2">Услуги мастера:</p>
+                            <p className="text-sm text-muted-foreground mb-2">Рабочие дни:</p>
                             <div className="flex flex-wrap gap-2">
-                                {allServices.map(service => (
+                                {[
+                                    { id: '1', label: 'Пн' },
+                                    { id: '2', label: 'Вт' },
+                                    { id: '3', label: 'Ср' },
+                                    { id: '4', label: 'Чт' },
+                                    { id: '5', label: 'Пт' },
+                                    { id: '6', label: 'Сб' },
+                                    { id: '7', label: 'Вс' },
+                                ].map(day => (
                                     <Button
-                                        key={service.id}
+                                        key={day.id}
+                                        type="button"
                                         size="sm"
-                                        variant={formData.selectedServices.includes(service.id) ? "default" : "outline"}
-                                        onClick={() => toggleService(service.id)}
-                                        className="text-xs"
+                                        variant={formData.work_days?.split(',').includes(day.id) ? "default" : "outline"}
+                                        onClick={() => toggleDay(day.id)}
+                                        className={formData.work_days?.split(',').includes(day.id) ? "bg-green-600 hover:bg-green-700" : ""}
                                     >
-                                        {service.name}
+                                        {day.label}
                                     </Button>
                                 ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="text-sm text-muted-foreground mb-2">Услуги мастера:</p>
+                            <div className="mb-2">
+                                <Input
+                                    placeholder="Поиск услуги..."
+                                    value={serviceSearchQuery}
+                                    onChange={(e) => setServiceSearchQuery(e.target.value)}
+                                    className="h-8 text-xs"
+                                />
+                            </div>
+                            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 border rounded-md">
+                                {allServices
+                                    .filter(s => s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase()))
+                                    .map(service => (
+                                        <Button
+                                            key={service.id}
+                                            size="sm"
+                                            variant={formData.selectedServices.includes(service.id) ? "default" : "outline"}
+                                            onClick={() => toggleService(service.id)}
+                                            className="text-xs"
+                                        >
+                                            {service.name}
+                                        </Button>
+                                    ))}
                                 {allServices.length === 0 && (
-                                    <p className="text-xs text-muted-foreground">Сначала добавьте услуги</p>
+                                    <p className="text-xs text-muted-foreground p-2">Сначала добавьте услуги</p>
                                 )}
                             </div>
                         </div>
@@ -346,17 +405,19 @@ export const MastersManagement = () => {
                 </Card>
             ))}
 
-            {masters.length === 0 && !isAdding && (
-                <Card className="border-dashed">
-                    <CardContent className="p-8 text-center text-muted-foreground">
-                        <User className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>Нет мастеров</p>
-                        <Button size="sm" variant="outline" className="mt-4" onClick={() => setIsAdding(true)}>
-                            Добавить первого мастера
-                        </Button>
-                    </CardContent>
-                </Card>
-            )}
-        </div>
+            {
+                masters.length === 0 && !isAdding && (
+                    <Card className="border-dashed">
+                        <CardContent className="p-8 text-center text-muted-foreground">
+                            <User className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p>Нет мастеров</p>
+                            <Button size="sm" variant="outline" className="mt-4" onClick={() => setIsAdding(true)}>
+                                Добавить первого мастера
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )
+            }
+        </div >
     );
 };

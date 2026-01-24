@@ -3,8 +3,9 @@ import { format, addMinutes, isBefore, startOfDay } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, X, Calendar as CalendarIcon, Clock, User, Phone, CreditCard, Star, Building2, MapPin } from 'lucide-react';
+import { Loader2, Plus, X, Calendar as CalendarIcon, Clock, User, Phone, CreditCard, Star, Building2, MapPin, Search } from 'lucide-react';
 import { shopConfig } from '@/config/shopConfig';
 import type { Service, Master } from '@/types';
 
@@ -40,6 +41,7 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
     const [clientPhone, setClientPhone] = useState('');
     const [isPaid, setIsPaid] = useState(false);
     const [bookedSlots, setBookedSlots] = useState<string[]>([]); // Занятые слоты
+    const [serviceSearchQuery, setServiceSearchQuery] = useState('');
 
     const [step, setStep] = useState(0); // 0: Branch, 1: Service, 2: Master, 3: DateTime, 4: Client Info
 
@@ -304,22 +306,33 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
                                 <Star className="h-4 w-4 text-yellow-500" />
                                 Выберите услугу
                             </h3>
+                            <div className="relative">
+                                <Input
+                                    placeholder="Поиск услуги..."
+                                    value={serviceSearchQuery}
+                                    onChange={(e) => setServiceSearchQuery(e.target.value)}
+                                    className="pl-9"
+                                />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            </div>
                             <div className="grid gap-2 max-h-60 overflow-y-auto">
-                                {services.map(service => (
-                                    <button
-                                        key={service.id}
-                                        className={`p-3 border rounded-lg text-left transition-colors ${selectedService?.id === service.id
-                                            ? 'border-primary bg-primary/10'
-                                            : 'hover:bg-muted'
-                                            }`}
-                                        onClick={() => setSelectedService(service)}
-                                    >
-                                        <div className="font-medium">{service.name}</div>
-                                        <div className="text-sm text-muted-foreground">
-                                            {service.duration_minutes} мин • {service.price} ₽
-                                        </div>
-                                    </button>
-                                ))}
+                                {services
+                                    .filter(s => s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase()))
+                                    .map(service => (
+                                        <button
+                                            key={service.id}
+                                            className={`p-3 border rounded-lg text-left transition-colors ${selectedService?.id === service.id
+                                                ? 'border-primary bg-primary/10'
+                                                : 'hover:bg-muted'
+                                                }`}
+                                            onClick={() => setSelectedService(service)}
+                                        >
+                                            <div className="font-medium">{service.name}</div>
+                                            <div className="text-sm text-muted-foreground">
+                                                {service.duration_minutes} мин • {service.price} ₽
+                                            </div>
+                                        </button>
+                                    ))}
                             </div>
                             <Button
                                 className="w-full"
