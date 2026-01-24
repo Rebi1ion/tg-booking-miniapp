@@ -398,7 +398,18 @@ export const AdminBookingForm: React.FC<AdminBookingFormProps> = ({ onClose, onS
                                         setSelectedTime('');
                                     }
                                 }}
-                                disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
+                                disabled={(date) => {
+                                    // Past dates check
+                                    if (isBefore(startOfDay(date), startOfDay(new Date()))) return true;
+
+                                    // Master's work_days check
+                                    if (selectedMaster && (selectedMaster as any).work_days) {
+                                        const dayOfWeek = date.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+                                        const workDayNumber = dayOfWeek === 0 ? 7 : dayOfWeek; // Convert: 0=Sun -> 7
+                                        return !(selectedMaster as any).work_days.split(',').includes(String(workDayNumber));
+                                    }
+                                    return false;
+                                }}
                                 className="rounded-md border"
                             />
 

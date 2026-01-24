@@ -108,7 +108,18 @@ export const TimeSelection = () => {
                     month={month}
                     onMonthChange={setMonth}
                     className="rounded-md border shadow"
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    disabled={(date) => {
+                        // Past dates check
+                        if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
+
+                        // Master's work_days check
+                        if (selectedMaster && (selectedMaster as any).work_days) {
+                            const dayOfWeek = date.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+                            const workDayNumber = dayOfWeek === 0 ? 7 : dayOfWeek; // Convert: 0=Sun -> 7
+                            return !(selectedMaster as any).work_days.split(',').includes(String(workDayNumber));
+                        }
+                        return false;
+                    }}
                     initialFocus
                 />
             </div>
