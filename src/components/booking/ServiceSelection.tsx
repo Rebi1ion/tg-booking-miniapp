@@ -9,7 +9,7 @@ import { shopConfig } from '@/config/shopConfig';
 import { Star, ChevronLeft, ChevronRight, Search, Flame } from 'lucide-react';
 
 export const ServiceSelection = () => {
-    const { services, setService, selectedService } = useAppStore();
+    const { services, setService, selectedService, user } = useAppStore();
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [activeHall, setActiveHall] = useState<string | null>(null);
     const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
@@ -26,7 +26,8 @@ export const ServiceSelection = () => {
     useEffect(() => {
         const fetchPromotions = async () => {
             try {
-                const res = await fetch(`${shopConfig.apiUrl}/promotions/auto-active`, {
+                const query = user?.id ? `?user_id=${user.id}` : '';
+                const res = await fetch(`${shopConfig.apiUrl}/promotions/auto-active${query}`, {
                     headers: { 'ngrok-skip-browser-warning': 'true' }
                 });
                 const data = await res.json();
@@ -36,7 +37,7 @@ export const ServiceSelection = () => {
             }
         };
         fetchPromotions();
-    }, []);
+    }, [user?.id]);
 
     // Separate recommended services (with order_count > 0) and group by category
     const { recommendedServices, categories, groupedServices, halls } = useMemo(() => {
@@ -85,9 +86,9 @@ export const ServiceSelection = () => {
         setActiveSubcategory(null);
     }, [activeCategory]);
 
-    // Reset category when hall changes (but keep 'recommended' valid)
+    // Reset category when hall changes (but keep 'recommended' and 'promotions' valid)
     useEffect(() => {
-        if (activeCategory && activeCategory !== 'recommended') {
+        if (activeCategory && activeCategory !== 'recommended' && activeCategory !== 'promotions') {
             // Check if current category exists in filtered categories
             const hallServices = activeHall
                 ? services.filter((s: any) => s.hall === activeHall)
@@ -158,9 +159,71 @@ export const ServiceSelection = () => {
         checkSubScrollArrows();
     }, [subcategoriesForCategory]);
 
+    // Get services with active promotions and calculate discounts - BEFORE displayServices
+    const { promoServicesWithDiscount, promoMap } = useMemo(() => {
+        if (autoPromotions.length === 0) return { promoServicesWithDiscount: [], promoMap: new Map() };
+
+        const promoServices: { service: any; originalPrice: number; discountedPrice: number; discount: number; discountType: string }[] = [];
+        const promoInfoMap = new Map<string, { originalPrice: number; discountedPrice: number; discount: number; discountType: string }>();
+
+        services.forEach((service: any) => {
+            let bestDiscount = 0;
+            let bestDiscountType = 'percent';
+            let bestDiscountValue = 0;
+            let bestPromoId = '';
+            let bestPromoName = '';
+
+            autoPromotions.forEach((promo: any) => {
+                let applies = false;
+
+                if (promo.applies_to_type === 'all' || !promo.applies_to_type) {
+                    applies = true;
+                } else if (promo.applies_to_type === 'services' && promo.applies_to) {
+                    const serviceIds = promo.applies_to.split(',').map((s: string) => s.trim());
+                    applies = serviceIds.includes(service.id);
+                } else if (promo.applies_to_type === 'categories' && promo.applies_to) {
+                    const cats = promo.applies_to.split(',').map((s: string) => s.trim());
+                    applies = cats.includes(service.category);
+                }
+
+                if (applies) {
+                    let discount = 0;
+                    if (promo.discount_type === 'percent') {
+                        discount = (service.price * promo.discount_value) / 100;
+                    } else {
+                        discount = promo.discount_value;
+                    }
+
+                    if (discount > bestDiscount) {
+                        bestDiscount = discount;
+                        bestDiscountType = promo.discount_type;
+                        bestDiscountValue = promo.discount_value;
+                        bestPromoId = promo.id;
+                        bestPromoName = promo.name;
+                    }
+                }
+            });
+
+            if (bestDiscount > 0) {
+                const promoInfo = {
+                    originalPrice: service.price,
+                    discountedPrice: Math.round(service.price - bestDiscount),
+                    discount: bestDiscountValue,
+                    discountType: bestDiscountType,
+                    id: bestPromoId,
+                    name: bestPromoName
+                };
+                promoServices.push({ service, ...promoInfo });
+                promoInfoMap.set(service.id, promoInfo);
+            }
+        });
+
+        return { promoServicesWithDiscount: promoServices, promoMap: promoInfoMap };
+    }, [services, autoPromotions]);
+
     // Get services to display based on active category, hall, and subcategory
     const displayServices = useMemo(() => {
-        let list = [];
+        let list: any[] = [];
 
         if (activeCategory === 'recommended') {
             list = recommendedServices;
@@ -194,7 +257,7 @@ export const ServiceSelection = () => {
             const query = searchQuery.toLowerCase();
             // Search across ALL services if user is searching
             const allServicesList = Object.values(groupedServices).flat();
-            const uniqueServices = Array.from(new Map(allServicesList.map(s => [s.id, s])).values());
+            const uniqueServices = Array.from(new Map(allServicesList.map((s: any) => [s.id, s])).values());
 
             let filtered = uniqueServices.filter((s: any) =>
                 s.name.toLowerCase().includes(query) ||
@@ -208,65 +271,21 @@ export const ServiceSelection = () => {
                 filtered = filtered.filter((s: any) => s.hall === activeHall);
             }
 
-            return filtered;
+            // Add promo info to filtered services
+            return filtered.map((s: any) => {
+                const promoInfo = promoMap.get(s.id);
+                return promoInfo ? { ...s, _promoInfo: promoInfo } : s;
+            });
         }
 
-        return list;
-    }, [activeCategory, activeHall, activeSubcategory, recommendedServices, groupedServices, searchQuery]);
-
-    // Get services with active promotions and calculate discounts
-    const promoServicesWithDiscount = useMemo(() => {
-        if (autoPromotions.length === 0) return [];
-
-        const promoServices: { service: any; originalPrice: number; discountedPrice: number; discount: number; discountType: string }[] = [];
-
-        services.forEach((service: any) => {
-            let bestDiscount = 0;
-            let bestDiscountType = 'percent';
-            let bestDiscountValue = 0;
-
-            autoPromotions.forEach((promo: any) => {
-                let applies = false;
-
-                if (promo.applies_to_type === 'all' || !promo.applies_to_type) {
-                    applies = true;
-                } else if (promo.applies_to_type === 'services' && promo.applies_to) {
-                    const serviceIds = promo.applies_to.split(',').map((s: string) => s.trim());
-                    applies = serviceIds.includes(service.id);
-                } else if (promo.applies_to_type === 'categories' && promo.applies_to) {
-                    const cats = promo.applies_to.split(',').map((s: string) => s.trim());
-                    applies = cats.includes(service.category);
-                }
-
-                if (applies) {
-                    let discount = 0;
-                    if (promo.discount_type === 'percent') {
-                        discount = (service.price * promo.discount_value) / 100;
-                    } else {
-                        discount = promo.discount_value;
-                    }
-
-                    if (discount > bestDiscount) {
-                        bestDiscount = discount;
-                        bestDiscountType = promo.discount_type;
-                        bestDiscountValue = promo.discount_value;
-                    }
-                }
-            });
-
-            if (bestDiscount > 0) {
-                promoServices.push({
-                    service,
-                    originalPrice: service.price,
-                    discountedPrice: Math.round(service.price - bestDiscount),
-                    discount: bestDiscountValue,
-                    discountType: bestDiscountType
-                });
-            }
+        // Add promo info to all services in the list
+        return list.map((s: any) => {
+            const promoInfo = promoMap.get(s.id);
+            return promoInfo ? { ...s, _promoInfo: promoInfo } : s;
         });
+    }, [activeCategory, activeHall, activeSubcategory, recommendedServices, groupedServices, searchQuery, promoServicesWithDiscount, promoMap]);
 
-        return promoServices;
-    }, [services, autoPromotions]);
+
 
     // All tabs - always include "Ваш выбор" first, then "Акции" if promotions exist, filter by activeHall
     const allTabs = useMemo(() => {

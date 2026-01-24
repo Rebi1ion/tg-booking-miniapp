@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import prisma from '../utils/prisma';
+import { sendMassNotification } from '../services/botService';
 
 const router = Router();
 
@@ -76,7 +77,7 @@ router.get('/auto-active', async (req, res) => {
         });
 
         // Filter by day and time
-        const activePromos = promotions.filter(promo => {
+        let activePromos = promotions.filter(promo => {
             // Check day of week
             if (promo.valid_days) {
                 const days = promo.valid_days.split(',').map(d => parseInt(d.trim()));
@@ -88,6 +89,44 @@ router.get('/auto-active', async (req, res) => {
             }
             return true;
         });
+
+        // Check usage limits if user_id provided
+        const userId = req.query.user_id ? String(req.query.user_id) : null;
+        if (userId) {
+            const userUsages = await prisma.promoUsage.findMany({
+                where: {
+                    user_id: userId,
+                    promotion_id: { in: activePromos.map(p => p.id) }
+                }
+            });
+
+            const usageMap = new Map();
+            userUsages.forEach(usage => {
+                // Simplified: if usage exists and max_uses is 1, exclude.
+            });
+
+            const usedPromoIds = userUsages.map(u => u.promotion_id);
+            activePromos = activePromos.filter(p => {
+                // Check if user has used this promo 
+                // (Currently logic assumes max_uses_per_user=1 mostly, or that count is checked elsewhere but here we just hide if used once? 
+                // No, validate endpoint checks count >= max. 
+                // But since we can only store one record due to unique constraint, effectively max is 1.
+                // So if used at all, we hide it if max_uses <= 1. 
+                // IF max_uses > 1, we allow it (and validations will happen later on booking if count exceeded - though count can't exceed 1 with current schema...)
+                // Correction: We need to fix the logic:
+                // IF usedPromoIds.includes(p.id) AND p.max_uses_per_user <= 1, THEN exclude.
+                // IF usedPromoIds.includes(p.id) AND p.max_uses_per_user > 1, THEN include (allow re-use up to max? But DB constraint stops it).
+                // For now, assuming standard case is 1-time use.
+
+                if (usedPromoIds.includes(p.id)) {
+                    // If promo is single-use per user, hide it
+                    if (p.max_uses_per_user <= 1) return false;
+                    // If allows multiple uses, we show it (but db constraint will block 2nd use currently - known limitation)
+                    return true;
+                }
+                return true;
+            });
+        }
 
         res.json(activePromos);
     } catch (error: any) {
@@ -129,6 +168,21 @@ router.post('/', async (req, res) => {
                 notification_message: notification_message || null
             }
         });
+
+        // Send notification if enabled
+        if (promotion.notify_clients && promotion.notification_message) {
+            let msg = promotion.notification_message
+                .replace(/{name}/g, promotion.name)
+                .replace(/{discount}/g, promotion.discount_value.toString());
+
+            // Run in background
+            sendMassNotification(msg).then(res => {
+                console.log(`Promotion notification sent: ${res.sent} sent, ${res.failed} failed`);
+            }).catch(err => {
+                console.error('Failed to send promotion notification:', err);
+            });
+        }
+
         res.json(promotion);
     } catch (error: any) {
         console.error("POST /api/promotions error:", error);
@@ -171,6 +225,21 @@ router.put('/:id', async (req, res) => {
                 notification_message: notification_message !== undefined ? notification_message : undefined
             }
         });
+
+        // Send notification if requested (if notify_clients is explicitly true in the update payload)
+        if (notify_clients === true && promotion.notification_message) {
+            let msg = promotion.notification_message
+                .replace(/{name}/g, promotion.name)
+                .replace(/{discount}/g, promotion.discount_value.toString());
+
+            // Run in background
+            sendMassNotification(msg).then(res => {
+                console.log(`Promotion updated notification sent: ${res.sent} sent, ${res.failed} failed`);
+            }).catch(err => {
+                console.error('Failed to send promotion notification:', err);
+            });
+        }
+
         res.json(promotion);
     } catch (error: any) {
         console.error(`PUT /api/promotions/${id} error:`, error);

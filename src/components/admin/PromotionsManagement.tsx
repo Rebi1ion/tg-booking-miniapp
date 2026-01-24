@@ -273,25 +273,25 @@ export function PromotionsManagement() {
                                 <div className="col-span-2">
                                     <Label>Тип применения</Label>
                                     <div className="flex gap-4 mt-2">
-                                        <label className="flex items-center gap-2 cursor-pointer">
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm whitespace-nowrap">
                                             <input
                                                 type="radio"
                                                 name="apply_type"
                                                 checked={formData.is_auto_apply}
                                                 onChange={() => setFormData({ ...formData, is_auto_apply: true, promo_code: '' })}
-                                                className="w-4 h-4"
+                                                className="w-3 h-3"
                                             />
-                                            <span>⚡ Автоматически</span>
+                                            <span>⚡ Авто</span>
                                         </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
+                                        <label className="flex items-center gap-2 cursor-pointer text-sm whitespace-nowrap">
                                             <input
                                                 type="radio"
                                                 name="apply_type"
                                                 checked={!formData.is_auto_apply}
                                                 onChange={() => setFormData({ ...formData, is_auto_apply: false })}
-                                                className="w-4 h-4"
+                                                className="w-3 h-3"
                                             />
-                                            <span>🎫 По промокоду</span>
+                                            <span>🎫 Промокод</span>
                                         </label>
                                     </div>
                                 </div>
@@ -482,9 +482,13 @@ export function PromotionsManagement() {
                                                 onChange={(e) => setFormData({ ...formData, notification_message: e.target.value })}
                                                 placeholder="🔥 Новая акция! {name} — скидка {discount}%!"
                                             />
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Переменные: {'{name}'}, {'{discount}'}
-                                            </p>
+                                            <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5 flex-wrap">
+                                                <span>Доступные переменные:</span>
+                                                <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-primary text-[10px] sm:text-xs">{"{name}"}</code>
+                                                <span>— название акции,</span>
+                                                <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-primary text-[10px] sm:text-xs">{"{discount}"}</code>
+                                                <span>— размер скидки</span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

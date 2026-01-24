@@ -126,7 +126,16 @@ export const BookingSummary = () => {
         discountAmount = promoInfo.originalPrice - promoInfo.discountedPrice;
         finalPrice = promoInfo.discountedPrice;
         isAutoPromoDiscount = true;
-        // We don't have promo ID here, so skip recording usage
+
+        // Construct activePromotion so usage is recorded
+        if (promoInfo.id) {
+            activePromotion = {
+                id: promoInfo.id,
+                name: promoInfo.name || 'Акция',
+                discount_type: promoInfo.discountType,
+                discount_value: promoInfo.discount
+            };
+        }
     } else if (datePromotion?.found && datePromotion.promotion) {
         // Date-based discount if no promo code
         activePromotion = datePromotion.promotion;
@@ -201,9 +210,9 @@ export const BookingSummary = () => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-muted-foreground">Услуга</span>
-                        <span className="font-medium">{selectedService.name}</span>
+                    <div className="flex justify-between items-start gap-4">
+                        <span className="text-muted-foreground whitespace-nowrap">Услуга</span>
+                        <span className="font-medium text-right">{selectedService.name}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-muted-foreground">Мастер</span>

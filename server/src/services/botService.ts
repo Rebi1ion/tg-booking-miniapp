@@ -517,4 +517,26 @@ if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
     process.once('SIGTERM', () => bot.stop('SIGTERM'));
 }
 
-export { };
+export const sendMassNotification = async (message: string): Promise<{ success: boolean; sent: number; failed: number; total: number }> => {
+    try {
+        const users = await prisma.user.findMany({ select: { telegram_id: true } });
+        let sent = 0;
+        let failed = 0;
+
+        for (const user of users) {
+            const userId = Number(user.telegram_id);
+            const success = await sendTelegramMessage(userId, message);
+            if (success) sent++;
+            else failed++;
+
+            // Small delay to avoid hitting rate limits too hard
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        return { success: true, sent, failed, total: users.length };
+    } catch (error) {
+        console.error('Mass notification error:', error);
+        return { success: false, sent: 0, failed: 0, total: 0 };
+    }
+};
+
