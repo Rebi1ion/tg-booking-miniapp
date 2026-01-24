@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { shopConfig } from '@/config/shopConfig';
-import { Star, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Search, Flame } from 'lucide-react';
 
 export const ServiceSelection = () => {
     const { services, setService, selectedService } = useAppStore();
@@ -20,6 +20,23 @@ export const ServiceSelection = () => {
     const [showSubLeftArrow, setShowSubLeftArrow] = useState(false);
     const [showSubRightArrow, setShowSubRightArrow] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [autoPromotions, setAutoPromotions] = useState<any[]>([]);
+
+    // Fetch auto-apply promotions
+    useEffect(() => {
+        const fetchPromotions = async () => {
+            try {
+                const res = await fetch(`${shopConfig.apiUrl}/promotions/auto-active`, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
+                const data = await res.json();
+                setAutoPromotions(data || []);
+            } catch (error) {
+                console.error('Failed to fetch promotions:', error);
+            }
+        };
+        fetchPromotions();
+    }, []);
 
     // Separate recommended services (with order_count > 0) and group by category
     const { recommendedServices, categories, groupedServices, halls } = useMemo(() => {
@@ -147,12 +164,23 @@ export const ServiceSelection = () => {
 
         if (activeCategory === 'recommended') {
             list = recommendedServices;
+        } else if (activeCategory === 'promotions') {
+            // Return promo services (no hall filter for promotions tab)
+            return promoServicesWithDiscount.map(p => ({
+                ...p.service,
+                _promoInfo: {
+                    originalPrice: p.originalPrice,
+                    discountedPrice: p.discountedPrice,
+                    discount: p.discount,
+                    discountType: p.discountType
+                }
+            }));
         } else {
             list = activeCategory ? (groupedServices[activeCategory] || []) : [];
         }
 
-        // Apply hall filter if selected (global)
-        if (activeHall) {
+        // For recommended tab - don't apply hall filter
+        if (activeCategory !== 'recommended' && activeHall) {
             list = list.filter((s: any) => s.hall === activeHall);
         }
 
@@ -186,7 +214,61 @@ export const ServiceSelection = () => {
         return list;
     }, [activeCategory, activeHall, activeSubcategory, recommendedServices, groupedServices, searchQuery]);
 
-    // All tabs - always include "Ваш выбор" first, filter by activeHall
+    // Get services with active promotions and calculate discounts
+    const promoServicesWithDiscount = useMemo(() => {
+        if (autoPromotions.length === 0) return [];
+
+        const promoServices: { service: any; originalPrice: number; discountedPrice: number; discount: number; discountType: string }[] = [];
+
+        services.forEach((service: any) => {
+            let bestDiscount = 0;
+            let bestDiscountType = 'percent';
+            let bestDiscountValue = 0;
+
+            autoPromotions.forEach((promo: any) => {
+                let applies = false;
+
+                if (promo.applies_to_type === 'all' || !promo.applies_to_type) {
+                    applies = true;
+                } else if (promo.applies_to_type === 'services' && promo.applies_to) {
+                    const serviceIds = promo.applies_to.split(',').map((s: string) => s.trim());
+                    applies = serviceIds.includes(service.id);
+                } else if (promo.applies_to_type === 'categories' && promo.applies_to) {
+                    const cats = promo.applies_to.split(',').map((s: string) => s.trim());
+                    applies = cats.includes(service.category);
+                }
+
+                if (applies) {
+                    let discount = 0;
+                    if (promo.discount_type === 'percent') {
+                        discount = (service.price * promo.discount_value) / 100;
+                    } else {
+                        discount = promo.discount_value;
+                    }
+
+                    if (discount > bestDiscount) {
+                        bestDiscount = discount;
+                        bestDiscountType = promo.discount_type;
+                        bestDiscountValue = promo.discount_value;
+                    }
+                }
+            });
+
+            if (bestDiscount > 0) {
+                promoServices.push({
+                    service,
+                    originalPrice: service.price,
+                    discountedPrice: Math.round(service.price - bestDiscount),
+                    discount: bestDiscountValue,
+                    discountType: bestDiscountType
+                });
+            }
+        });
+
+        return promoServices;
+    }, [services, autoPromotions]);
+
+    // All tabs - always include "Ваш выбор" first, then "Акции" if promotions exist, filter by activeHall
     const allTabs = useMemo(() => {
         const tabs: { key: string; label: string; icon?: React.ReactNode }[] = [];
 
@@ -196,6 +278,15 @@ export const ServiceSelection = () => {
             label: 'Ваш выбор',
             icon: <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
         });
+
+        // Show "Акции" tab if there are promo services
+        if (promoServicesWithDiscount.length > 0) {
+            tabs.push({
+                key: 'promotions',
+                label: 'Акции',
+                icon: <Flame className="h-3 w-3 fill-orange-500 text-orange-500" />
+            });
+        }
 
         // Filter categories by activeHall
         let filteredCategories = categories;
@@ -210,7 +301,7 @@ export const ServiceSelection = () => {
         });
 
         return tabs;
-    }, [categories, activeHall, services]);
+    }, [categories, activeHall, services, promoServicesWithDiscount]);
 
     return (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -391,7 +482,21 @@ export const ServiceSelection = () => {
                                     <p className="text-xs text-muted-foreground mt-1">{service.duration_minutes} мин</p>
                                 </div>
                                 <div className="text-right">
-                                    <span className="font-bold text-lg">{service.price} ₽</span>
+                                    {service._promoInfo ? (
+                                        <div className="flex flex-col items-end gap-0.5">
+                                            <span className="text-sm text-muted-foreground line-through">
+                                                {service._promoInfo.originalPrice} ₽
+                                            </span>
+                                            <span className="font-bold text-lg text-green-600">
+                                                {service._promoInfo.discountedPrice} ₽
+                                            </span>
+                                            <Badge variant="destructive" className="text-xs">
+                                                -{service._promoInfo.discount}{service._promoInfo.discountType === 'percent' ? '%' : ' ₽'}
+                                            </Badge>
+                                        </div>
+                                    ) : (
+                                        <span className="font-bold text-lg">{service.price} ₽</span>
+                                    )}
                                 </div>
                             </div>
                         </CardHeader>

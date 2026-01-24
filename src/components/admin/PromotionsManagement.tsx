@@ -20,9 +20,16 @@ interface Promotion {
     start_date?: string;
     end_date?: string;
     is_active: boolean;
+    applies_to_type?: string;
     applies_to?: string;
     max_uses_per_user: number;
     max_total_uses?: number;
+    is_auto_apply?: boolean;
+    valid_days?: string;
+    time_start?: string;
+    time_end?: string;
+    notify_clients?: boolean;
+    notification_message?: string;
     created_at: string;
 }
 
@@ -41,14 +48,39 @@ export function PromotionsManagement() {
         start_date: '',
         end_date: '',
         is_active: true,
-        applies_to: 'all',
+        applies_to_type: 'all' as 'all' | 'services' | 'categories',
+        applies_to: '',
         max_uses_per_user: 1,
-        max_total_uses: '' as string | number
+        max_total_uses: '' as string | number,
+        is_auto_apply: false,
+        valid_days: '' as string,
+        time_start: '',
+        time_end: '',
+        notify_clients: false,
+        notification_message: ''
     });
+
+    const [services, setServices] = useState<any[]>([]);
+    const [categories, setCategories] = useState<string[]>([]);
 
     useEffect(() => {
         fetchPromotions();
+        fetchServicesAndCategories();
     }, []);
+
+    const fetchServicesAndCategories = async () => {
+        try {
+            const res = await fetch(`${shopConfig.apiUrl}/services`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            const data = await res.json();
+            setServices(data || []);
+            const cats = [...new Set(data.map((s: any) => s.category).filter(Boolean))] as string[];
+            setCategories(cats.sort());
+        } catch (error) {
+            console.error('Failed to fetch services:', error);
+        }
+    };
 
     const fetchPromotions = async () => {
         try {
@@ -116,9 +148,16 @@ export function PromotionsManagement() {
             start_date: promotion.start_date ? promotion.start_date.split('T')[0] : '',
             end_date: promotion.end_date ? promotion.end_date.split('T')[0] : '',
             is_active: promotion.is_active,
-            applies_to: promotion.applies_to || 'all',
+            applies_to_type: (promotion.applies_to_type as any) || 'all',
+            applies_to: promotion.applies_to || '',
             max_uses_per_user: promotion.max_uses_per_user || 1,
-            max_total_uses: promotion.max_total_uses || ''
+            max_total_uses: promotion.max_total_uses || '',
+            is_auto_apply: promotion.is_auto_apply || false,
+            valid_days: promotion.valid_days || '',
+            time_start: promotion.time_start || '',
+            time_end: promotion.time_end || '',
+            notify_clients: promotion.notify_clients || false,
+            notification_message: promotion.notification_message || ''
         });
         setIsCreating(true);
     };
@@ -133,9 +172,16 @@ export function PromotionsManagement() {
             start_date: '',
             end_date: '',
             is_active: true,
-            applies_to: 'all',
+            applies_to_type: 'all',
+            applies_to: '',
             max_uses_per_user: 1,
-            max_total_uses: ''
+            max_total_uses: '',
+            is_auto_apply: false,
+            valid_days: '',
+            time_start: '',
+            time_end: '',
+            notify_clients: false,
+            notification_message: ''
         });
         setEditingPromotion(null);
         setIsCreating(false);
@@ -223,14 +269,114 @@ export function PromotionsManagement() {
                                     />
                                 </div>
 
+                                {/* Тип применения */}
                                 <div className="col-span-2">
-                                    <Label>Промокод (необязательно)</Label>
-                                    <Input
-                                        value={formData.promo_code}
-                                        onChange={(e) => setFormData({ ...formData, promo_code: e.target.value.toUpperCase() })}
-                                        placeholder="SALE20"
-                                    />
+                                    <Label>Тип применения</Label>
+                                    <div className="flex gap-4 mt-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="apply_type"
+                                                checked={formData.is_auto_apply}
+                                                onChange={() => setFormData({ ...formData, is_auto_apply: true, promo_code: '' })}
+                                                className="w-4 h-4"
+                                            />
+                                            <span>⚡ Автоматически</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="apply_type"
+                                                checked={!formData.is_auto_apply}
+                                                onChange={() => setFormData({ ...formData, is_auto_apply: false })}
+                                                className="w-4 h-4"
+                                            />
+                                            <span>🎫 По промокоду</span>
+                                        </label>
+                                    </div>
                                 </div>
+
+                                {/* Промокод (только если не авто) */}
+                                {!formData.is_auto_apply && (
+                                    <div className="col-span-2">
+                                        <Label>Промокод</Label>
+                                        <Input
+                                            value={formData.promo_code}
+                                            onChange={(e) => setFormData({ ...formData, promo_code: e.target.value.toUpperCase() })}
+                                            placeholder="SALE20"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Применить к */}
+                                <div className="col-span-2">
+                                    <Label>Применить к</Label>
+                                    <select
+                                        className="w-full h-10 px-3 rounded-md border bg-background"
+                                        value={formData.applies_to_type}
+                                        onChange={(e) => setFormData({ ...formData, applies_to_type: e.target.value as any, applies_to: '' })}
+                                    >
+                                        <option value="all">Все услуги</option>
+                                        <option value="services">Выбранные услуги</option>
+                                        <option value="categories">Выбранные категории</option>
+                                    </select>
+                                </div>
+
+                                {/* Выбор услуг */}
+                                {formData.applies_to_type === 'services' && (
+                                    <div className="col-span-2">
+                                        <Label>Выберите услуги</Label>
+                                        <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1 mt-1">
+                                            {services.map((s: any) => (
+                                                <label key={s.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.applies_to.split(',').includes(s.id)}
+                                                        onChange={(e) => {
+                                                            const ids = formData.applies_to ? formData.applies_to.split(',').filter(Boolean) : [];
+                                                            if (e.target.checked) {
+                                                                ids.push(s.id);
+                                                            } else {
+                                                                const idx = ids.indexOf(s.id);
+                                                                if (idx > -1) ids.splice(idx, 1);
+                                                            }
+                                                            setFormData({ ...formData, applies_to: ids.join(',') });
+                                                        }}
+                                                    />
+                                                    {s.name} — {s.price} ₽
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Выбор категорий */}
+                                {formData.applies_to_type === 'categories' && (
+                                    <div className="col-span-2">
+                                        <Label>Выберите категории</Label>
+                                        <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1 mt-1">
+                                            {categories.map((cat: string) => (
+                                                <label key={cat} className="flex items-center gap-2 cursor-pointer text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.applies_to.split(',').includes(cat)}
+                                                        onChange={(e) => {
+                                                            const cats = formData.applies_to ? formData.applies_to.split(',').filter(Boolean) : [];
+                                                            if (e.target.checked) {
+                                                                cats.push(cat);
+                                                            } else {
+                                                                const idx = cats.indexOf(cat);
+                                                                if (idx > -1) cats.splice(idx, 1);
+                                                            }
+                                                            setFormData({ ...formData, applies_to: cats.join(',') });
+                                                        }}
+                                                    />
+                                                    {cat}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div>
                                     <Label>Дата начала</Label>
@@ -250,12 +396,64 @@ export function PromotionsManagement() {
                                     />
                                 </div>
 
-                                {!formData.promo_code && (formData.start_date || formData.end_date) && (
-                                    <div className="col-span-2 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                                        <p className="text-xs text-blue-600 dark:text-blue-400">
-                                            💡 Без промокода скидка автоматически применится к записям на даты в указанном диапазоне
-                                        </p>
+                                {/* Дни недели (для авто) */}
+                                {formData.is_auto_apply && (
+                                    <div className="col-span-2">
+                                        <Label>Дни недели (опционально)</Label>
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {[
+                                                { value: '1', label: 'Пн' },
+                                                { value: '2', label: 'Вт' },
+                                                { value: '3', label: 'Ср' },
+                                                { value: '4', label: 'Чт' },
+                                                { value: '5', label: 'Пт' },
+                                                { value: '6', label: 'Сб' },
+                                                { value: '7', label: 'Вс' },
+                                            ].map((day) => {
+                                                const days = formData.valid_days ? formData.valid_days.split(',') : [];
+                                                const isChecked = days.includes(day.value);
+                                                return (
+                                                    <button
+                                                        key={day.value}
+                                                        type="button"
+                                                        className={`px-3 py-1 rounded-full text-sm border ${isChecked ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                                                        onClick={() => {
+                                                            if (isChecked) {
+                                                                setFormData({ ...formData, valid_days: days.filter(d => d !== day.value).join(',') });
+                                                            } else {
+                                                                setFormData({ ...formData, valid_days: [...days, day.value].sort().join(',') });
+                                                            }
+                                                        }}
+                                                    >
+                                                        {day.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">Пусто = все дни</p>
                                     </div>
+                                )}
+
+                                {/* Время (для авто) */}
+                                {formData.is_auto_apply && (
+                                    <>
+                                        <div>
+                                            <Label>Время с</Label>
+                                            <Input
+                                                type="time"
+                                                value={formData.time_start}
+                                                onChange={(e) => setFormData({ ...formData, time_start: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>Время до</Label>
+                                            <Input
+                                                type="time"
+                                                value={formData.time_end}
+                                                onChange={(e) => setFormData({ ...formData, time_end: e.target.value })}
+                                            />
+                                        </div>
+                                    </>
                                 )}
 
                                 <div className="col-span-2 flex items-center gap-2">
@@ -264,6 +462,31 @@ export function PromotionsManagement() {
                                         onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                                     />
                                     <Label>Активна</Label>
+                                </div>
+
+                                {/* Уведомление */}
+                                <div className="col-span-2 border rounded-lg p-3 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Switch
+                                            checked={formData.notify_clients}
+                                            onCheckedChange={(checked) => setFormData({ ...formData, notify_clients: checked })}
+                                        />
+                                        <Label>🔔 Уведомить клиентов об акции</Label>
+                                    </div>
+                                    {formData.notify_clients && (
+                                        <div>
+                                            <Label className="text-sm">Текст уведомления</Label>
+                                            <textarea
+                                                className="w-full h-20 px-3 py-2 rounded-md border bg-background text-sm mt-1"
+                                                value={formData.notification_message}
+                                                onChange={(e) => setFormData({ ...formData, notification_message: e.target.value })}
+                                                placeholder="🔥 Новая акция! {name} — скидка {discount}%!"
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Переменные: {'{name}'}, {'{discount}'}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>

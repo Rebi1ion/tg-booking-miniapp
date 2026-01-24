@@ -122,20 +122,33 @@ model Booking {
 }
 
 model Promotion {
-  id                 String       @id @default(uuid())
-  name               String
-  description        String?
-  discount_type      String       // 'percent' | 'fixed'
-  discount_value     Int
-  promo_code         String?      @unique
-  start_date         DateTime?
-  end_date           DateTime?
-  is_active          Boolean      @default(true)
-  applies_to         String?      // 'all' or comma-separated service IDs
-  max_uses_per_user  Int          @default(1)  // Max times one user can use this promo
-  max_total_uses     Int?         // Total usage limit (null = unlimited), e.g. "for first 50 clients"
-  created_at         DateTime     @default(now())
-  usages             PromoUsage[]
+  id                   String       @id @default(uuid())
+  name                 String
+  description          String?
+  discount_type        String       // 'percent' | 'fixed'
+  discount_value       Int
+  promo_code           String?      @unique
+  start_date           DateTime?
+  end_date             DateTime?
+  is_active            Boolean      @default(true)
+  applies_to_type      String       @default("all")  // 'all' | 'services' | 'categories'
+  applies_to           String?      // comma-separated service IDs or category names
+  max_uses_per_user    Int          @default(1)
+  max_total_uses       Int?
+  
+  // Auto-apply (without promo code)
+  is_auto_apply        Boolean      @default(false)
+  valid_days           String?      // Days of week: "1,2,3,4,5" (1=Mon, 7=Sun)
+  time_start           String?      // "10:00"
+  time_end             String?      // "14:00"
+  
+  // Notification
+  notify_clients       Boolean      @default(false)
+  notification_message String?
+  notification_sent    Boolean      @default(false)
+  
+  created_at           DateTime     @default(now())
+  usages               PromoUsage[]
 }
 
 model PromoUsage {

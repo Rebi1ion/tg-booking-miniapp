@@ -109,23 +109,31 @@ export const BookingSummary = () => {
     };
 
 
-    // Calculate discounted price - prioritize promo code, then date-based discount
+    // Calculate discounted price - prioritize: promo code > auto-promo from selection > date-based discount
     const originalPrice = selectedService.price;
     let discountAmount = 0;
     let finalPrice = originalPrice;
     let activePromotion: { id: string; name: string; discount_type: string; discount_value: number } | null = null;
     let isDateBasedDiscount = false;
+    let isAutoPromoDiscount = false;
 
     if (promoValidation?.valid && promoValidation.promotion) {
         // Promo code takes priority
         activePromotion = promoValidation.promotion;
+    } else if ((selectedService as any)._promoInfo) {
+        // Auto-promo from service selection
+        const promoInfo = (selectedService as any)._promoInfo;
+        discountAmount = promoInfo.originalPrice - promoInfo.discountedPrice;
+        finalPrice = promoInfo.discountedPrice;
+        isAutoPromoDiscount = true;
+        // We don't have promo ID here, so skip recording usage
     } else if (datePromotion?.found && datePromotion.promotion) {
         // Date-based discount if no promo code
         activePromotion = datePromotion.promotion;
         isDateBasedDiscount = true;
     }
 
-    if (activePromotion) {
+    if (activePromotion && !isAutoPromoDiscount) {
         const { discount_type, discount_value } = activePromotion;
         if (discount_type === 'percent') {
             discountAmount = Math.round(originalPrice * discount_value / 100);
@@ -209,6 +217,19 @@ export const BookingSummary = () => {
                         <span className="text-muted-foreground">Время</span>
                         <span className="font-medium">{selectedTimeSlot}</span>
                     </div>
+
+                    {/* Automatic Auto-Promo Discount Banner */}
+                    {isAutoPromoDiscount && (selectedService as any)._promoInfo && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-600">
+                            <Gift className="w-4 h-4 flex-shrink-0" />
+                            <div className="text-sm">
+                                <span className="font-medium">🔥 Акция</span>
+                                <span className="ml-1">
+                                    (-{(selectedService as any)._promoInfo.discount}{(selectedService as any)._promoInfo.discountType === 'percent' ? '%' : ' ₽'})
+                                </span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Automatic Date Discount Banner */}
                     {isDateBasedDiscount && datePromotion?.promotion && (

@@ -47,10 +47,65 @@ router.get('/active', async (req, res) => {
     }
 });
 
+// GET /api/promotions/auto-active - get auto-apply promotions for display
+router.get('/auto-active', async (req, res) => {
+    console.log("GET /api/promotions/auto-active hit");
+    try {
+        const now = new Date();
+        const dayOfWeek = now.getDay() || 7; // 1=Mon, 7=Sun
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        const promotions = await prisma.promotion.findMany({
+            where: {
+                is_active: true,
+                is_auto_apply: true,
+                OR: [
+                    { start_date: null },
+                    { start_date: { lte: now } }
+                ],
+                AND: [
+                    {
+                        OR: [
+                            { end_date: null },
+                            { end_date: { gte: now } }
+                        ]
+                    }
+                ]
+            },
+            orderBy: { discount_value: 'desc' }
+        });
+
+        // Filter by day and time
+        const activePromos = promotions.filter(promo => {
+            // Check day of week
+            if (promo.valid_days) {
+                const days = promo.valid_days.split(',').map(d => parseInt(d.trim()));
+                if (!days.includes(dayOfWeek)) return false;
+            }
+            // Check time
+            if (promo.time_start && promo.time_end) {
+                if (currentTime < promo.time_start || currentTime > promo.time_end) return false;
+            }
+            return true;
+        });
+
+        res.json(activePromos);
+    } catch (error: any) {
+        console.error("GET /api/promotions/auto-active error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // POST /api/promotions - create promotion
 router.post('/', async (req, res) => {
-    const { name, description, discount_type, discount_value, promo_code, start_date, end_date, is_active, applies_to, max_uses_per_user, max_total_uses } = req.body;
-    console.log("POST /api/promotions hit:", { name, promo_code });
+    const {
+        name, description, discount_type, discount_value, promo_code,
+        start_date, end_date, is_active, applies_to_type, applies_to,
+        max_uses_per_user, max_total_uses,
+        is_auto_apply, valid_days, time_start, time_end,
+        notify_clients, notification_message
+    } = req.body;
+    console.log("POST /api/promotions hit:", { name, promo_code, is_auto_apply });
     try {
         const promotion = await prisma.promotion.create({
             data: {
@@ -62,9 +117,16 @@ router.post('/', async (req, res) => {
                 start_date: start_date ? new Date(start_date) : null,
                 end_date: end_date ? new Date(end_date) : null,
                 is_active: is_active !== undefined ? is_active : true,
+                applies_to_type: applies_to_type || 'all',
                 applies_to,
                 max_uses_per_user: parseInt(max_uses_per_user) || 1,
-                max_total_uses: max_total_uses ? parseInt(max_total_uses) : null
+                max_total_uses: max_total_uses ? parseInt(max_total_uses) : null,
+                is_auto_apply: is_auto_apply || false,
+                valid_days: valid_days || null,
+                time_start: time_start || null,
+                time_end: time_end || null,
+                notify_clients: notify_clients || false,
+                notification_message: notification_message || null
             }
         });
         res.json(promotion);
@@ -77,7 +139,13 @@ router.post('/', async (req, res) => {
 // PUT /api/promotions/:id - update promotion
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, description, discount_type, discount_value, promo_code, start_date, end_date, is_active, applies_to, max_uses_per_user, max_total_uses } = req.body;
+    const {
+        name, description, discount_type, discount_value, promo_code,
+        start_date, end_date, is_active, applies_to_type, applies_to,
+        max_uses_per_user, max_total_uses,
+        is_auto_apply, valid_days, time_start, time_end,
+        notify_clients, notification_message
+    } = req.body;
     console.log(`PUT /api/promotions/${id} hit`);
     try {
         const promotion = await prisma.promotion.update({
@@ -91,9 +159,16 @@ router.put('/:id', async (req, res) => {
                 start_date: start_date ? new Date(start_date) : null,
                 end_date: end_date ? new Date(end_date) : null,
                 is_active,
+                applies_to_type: applies_to_type || 'all',
                 applies_to,
                 max_uses_per_user: max_uses_per_user !== undefined ? parseInt(max_uses_per_user) || 1 : undefined,
-                max_total_uses: max_total_uses !== undefined ? (max_total_uses ? parseInt(max_total_uses) : null) : undefined
+                max_total_uses: max_total_uses !== undefined ? (max_total_uses ? parseInt(max_total_uses) : null) : undefined,
+                is_auto_apply: is_auto_apply !== undefined ? is_auto_apply : undefined,
+                valid_days: valid_days !== undefined ? valid_days : undefined,
+                time_start: time_start !== undefined ? time_start : undefined,
+                time_end: time_end !== undefined ? time_end : undefined,
+                notify_clients: notify_clients !== undefined ? notify_clients : undefined,
+                notification_message: notification_message !== undefined ? notification_message : undefined
             }
         });
         res.json(promotion);
