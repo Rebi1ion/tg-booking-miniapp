@@ -29,6 +29,10 @@ interface DatePromotion {
         discount_type: 'percent' | 'fixed';
         discount_value: number;
     };
+    _params?: {
+        date: string;
+        time?: string;
+    };
 }
 
 export const BookingSummary = () => {
@@ -38,6 +42,13 @@ export const BookingSummary = () => {
     const [promoValidation, setPromoValidation] = useState<PromoValidation | null>(null);
     const [isValidating, setIsValidating] = useState(false);
     const [datePromotion, setDatePromotion] = useState<DatePromotion | null>(null);
+    const [isCheckingDatePromo, setIsCheckingDatePromo] = useState(false);
+
+    // Form current date string locally for sync comparison
+    const year = selectedDate?.getFullYear() || 0;
+    const month = String((selectedDate?.getMonth() || 0) + 1).padStart(2, '0');
+    const day = String(selectedDate?.getDate() || 0).padStart(2, '0');
+    const currentDateString = selectedDate ? `${year}-${month}-${day}` : '';
 
     // Check for date-based discounts when date or service changes
     useEffect(() => {
@@ -47,12 +58,13 @@ export const BookingSummary = () => {
                 return;
             }
 
+            // Reset and mark as loading
+            setDatePromotion(null);
+            setIsCheckingDatePromo(true);
+
             try {
-                // Send date as YYYY-MM-DD string to avoid timezone issues
-                const year = selectedDate.getFullYear();
-                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-                const day = String(selectedDate.getDate()).padStart(2, '0');
-                const dateString = `${year}-${month}-${day}`;
+                // Use the calculated string
+                const dateString = currentDateString;
 
                 const res = await fetch(`${shopConfig.apiUrl}/promotions/check-date`, {
                     method: 'POST',
@@ -62,20 +74,31 @@ export const BookingSummary = () => {
                     },
                     body: JSON.stringify({
                         booking_date: dateString,
+                        booking_time: selectedTimeSlot || undefined,
                         service_id: selectedService.id,
                         user_id: user?.id
                     })
                 });
                 const data = await res.json();
-                setDatePromotion(data);
+
+                // Store with params for validation
+                setDatePromotion({
+                    ...data,
+                    _params: {
+                        date: dateString,
+                        time: selectedTimeSlot || undefined
+                    }
+                });
             } catch (error) {
                 console.error('Failed to check date discount:', error);
                 setDatePromotion(null);
+            } finally {
+                setIsCheckingDatePromo(false);
             }
         };
 
         checkDateDiscount();
-    }, [selectedDate, selectedService, user?.id]);
+    }, [selectedDate, selectedService, selectedTimeSlot, user?.id, currentDateString]);
 
     if (!selectedService || !selectedMaster || !selectedDate || !selectedTimeSlot) return null;
 
@@ -117,11 +140,22 @@ export const BookingSummary = () => {
     let isDateBasedDiscount = false;
     let isAutoPromoDiscount = false;
 
+    // Validate if the current datePromotion matches the CURRENT selection
+    const isPromoValidForCurrentSelection =
+        datePromotion?.found &&
+        datePromotion._params?.date === currentDateString &&
+        datePromotion._params?.time === (selectedTimeSlot || undefined);
+
     if (promoValidation?.valid && promoValidation.promotion) {
         // Promo code takes priority
         activePromotion = promoValidation.promotion;
-    } else if ((selectedService as any)._promoInfo) {
-        // Auto-promo from service selection
+    } else if (isPromoValidForCurrentSelection && datePromotion?.promotion) {
+        // Date-based discount validated by /check-date AND matches current selection
+        activePromotion = datePromotion.promotion;
+        isDateBasedDiscount = true;
+    } else if ((selectedService as any)._promoInfo && datePromotion === null && !isCheckingDatePromo) {
+        // Auto-promo from service selection - ONLY if date check hasn't run yet
+        // Once datePromotion is set (even to {found: false}), we trust backend validation
         const promoInfo = (selectedService as any)._promoInfo;
         discountAmount = promoInfo.originalPrice - promoInfo.discountedPrice;
         finalPrice = promoInfo.discountedPrice;
@@ -136,10 +170,6 @@ export const BookingSummary = () => {
                 discount_value: promoInfo.discount
             };
         }
-    } else if (datePromotion?.found && datePromotion.promotion) {
-        // Date-based discount if no promo code
-        activePromotion = datePromotion.promotion;
-        isDateBasedDiscount = true;
     }
 
     if (activePromotion && !isAutoPromoDiscount) {
@@ -227,22 +257,16 @@ export const BookingSummary = () => {
                         <span className="font-medium">{selectedTimeSlot}</span>
                     </div>
 
-                    {/* Automatic Auto-Promo Discount Banner */}
-                    {isAutoPromoDiscount && (selectedService as any)._promoInfo && (
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 text-orange-600">
-                            <Gift className="w-4 h-4 flex-shrink-0" />
-                            <div className="text-sm">
-                                <span className="font-medium">🔥 Акция</span>
-                                <span className="ml-1">
-                                    (-{(selectedService as any)._promoInfo.discount}{(selectedService as any)._promoInfo.discountType === 'percent' ? '%' : ' ₽'})
-                                </span>
-                            </div>
-                        </div>
-                    )}
 
-                    {/* Automatic Date Discount Banner */}
-                    {isDateBasedDiscount && datePromotion?.promotion && (
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600">
+
+
+
+
+
+
+                    {/* Automatic Date Discount Banner - only show after check completes AND matches current selection */}
+                    {!isCheckingDatePromo && isDateBasedDiscount && datePromotion?.promotion && isPromoValidForCurrentSelection && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 animate-in fade-in duration-300">
                             <Gift className="w-4 h-4 flex-shrink-0" />
                             <div className="text-sm">
                                 <span className="font-medium">{datePromotion.promotion.name}</span>

@@ -72,7 +72,7 @@ const mockTelegram = {
 };
 
 function App() {
-    const { loadInitialData, upsertUser, isAdmin, checkIsAdmin, checkIsMaster, masterInfo, user } = useAppStore();
+    const { loadInitialData, upsertUser, isAdmin, checkIsAdmin, checkIsMaster, masterInfo, user, resetBooking } = useAppStore();
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'client' | 'admin' | 'master'>('client');
     const [clientTab, setClientTab] = useState<'booking' | 'my-bookings'>('booking');
@@ -83,6 +83,9 @@ function App() {
     useEffect(() => {
         // ... existing init logic ...
         const init = async () => {
+            // Reset any stale booking state from previous session
+            resetBooking();
+
             // Пытаемся получить объект Telegram
             // @ts-ignore
             const telegramWebApp = window.Telegram?.WebApp;

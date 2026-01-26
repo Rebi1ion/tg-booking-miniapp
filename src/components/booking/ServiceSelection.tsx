@@ -24,6 +24,9 @@ export const ServiceSelection = () => {
 
     // Fetch auto-apply promotions
     useEffect(() => {
+        // Optimization: Don't re-fetch if already loaded (unless user changed significantly)
+        if (autoPromotions.length > 0) return;
+
         const fetchPromotions = async () => {
             try {
                 const query = user?.id ? `?user_id=${user.id}` : '';
@@ -37,7 +40,7 @@ export const ServiceSelection = () => {
             }
         };
         fetchPromotions();
-    }, [user?.id]);
+    }, [user?.id]); // Keeping dependency but added length check guard
 
     // Separate recommended services (with order_count > 0) and group by category
     const { recommendedServices, categories, groupedServices, halls } = useMemo(() => {

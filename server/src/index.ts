@@ -34,7 +34,7 @@ app.set('trust proxy', 1);
 // Rate limiting - protect from DDoS
 const limiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '60'), // limit per IP
+    max: parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '100'), // limit per IP
     message: { error: 'Too many requests, please try again later' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -42,6 +42,8 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
+
+
 app.use(cors({
     origin: '*',
     allowedHeaders: ['Content-Type', 'ngrok-skip-browser-warning']

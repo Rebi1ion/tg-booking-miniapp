@@ -121,6 +121,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     userBookings: [],
 
     setBranch: async (branch) => {
+        const currentBranch = get().selectedBranch;
+        // Optimization: Don't re-fetch if selecting the same branch
+        if (currentBranch?.id === branch?.id) {
+            return;
+        }
+
         set({
             selectedBranch: branch,
             selectedService: null,
@@ -166,6 +172,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     resetBooking: () => set({
         currentStep: 1,
+        selectedBranch: null,
         selectedService: null,
         selectedMaster: null,
         selectedDate: null,

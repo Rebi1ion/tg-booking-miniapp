@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AlertCircle } from 'lucide-react';
 
 import { MapPin, Clock, Phone, ChevronRight, Building2 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
@@ -25,14 +26,11 @@ interface BranchSelectionProps {
 export function BranchSelection({ onBranchSelected }: BranchSelectionProps) {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const { selectedBranch, setBranch, user } = useAppStore();
 
     // Flag to prevent preferred branch from being auto-restored after user clears
     const userClearedBranchRef = useRef(false);
-
-    useEffect(() => {
-        fetchBranches();
-    }, []);
 
     // Auto-select if only one branch
     useEffect(() => {
@@ -44,7 +42,6 @@ export function BranchSelection({ onBranchSelected }: BranchSelectionProps) {
     // Try to restore user's preferred branch (only on initial load, not after user clears)
     useEffect(() => {
         if (userClearedBranchRef.current) {
-            // User intentionally cleared the branch, don't auto-restore
             return;
         }
         if (user?.preferred_branch_id && branches.length > 0 && !selectedBranch) {
@@ -55,18 +52,71 @@ export function BranchSelection({ onBranchSelected }: BranchSelectionProps) {
         }
     }, [user?.preferred_branch_id, branches, selectedBranch]);
 
-    const fetchBranches = async () => {
-        try {
-            const res = await fetch(`${API_URL}/branches`, {
-                headers: { 'ngrok-skip-browser-warning': 'true' }
-            });
-            const data = await res.json();
-            setBranches(data);
-        } catch (error) {
-            console.error('Failed to fetch branches:', error);
-        } finally {
-            setLoading(false);
-        }
+    // Auto-retry fetch effect
+    useEffect(() => {
+        let mounted = true;
+        let attempt = 0;
+        const maxAttempts = 3;
+
+        const attemptFetch = async () => {
+            if (!mounted) return;
+            try {
+                // Only set loading on first attempt to avoid flicker
+                if (attempt === 0) setLoading(true);
+
+                const res = await fetch(`${API_URL}/branches`, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Server error: ${res.status}`);
+                }
+
+                const data = await res.json();
+                if (mounted) {
+                    setBranches(data);
+                    setLoading(false);
+                    setError(null);
+                }
+            } catch (err: any) {
+                console.error(`Fetch branches attempt ${attempt + 1} failed:`, err);
+                if (attempt < maxAttempts - 1) {
+                    attempt++;
+                    setTimeout(attemptFetch, 1000 * (attempt + 1)); // Exponential backoff: 1s, 2s, 3s
+                } else {
+                    if (mounted) {
+                        setError(err.message || 'Сбой загрузки');
+                        setLoading(false);
+                    }
+                }
+            }
+        };
+
+        attemptFetch();
+
+        return () => { mounted = false; };
+    }, []);
+
+    const manualRetry = () => {
+        setError(null);
+        setLoading(true);
+        // Quick manual retry reuse
+        const fetchOnce = async () => {
+            try {
+                const res = await fetch(`${API_URL}/branches`, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (!res.ok) throw new Error(`Status ${res.status}`);
+                const data = await res.json();
+                setBranches(data);
+                setError(null);
+            } catch (e: any) {
+                setError(e.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchOnce();
     };
 
     const handleSelectBranch = async (branch: Branch) => {
@@ -107,10 +157,24 @@ export function BranchSelection({ onBranchSelected }: BranchSelectionProps) {
         );
     }
 
-    // If no branches exist, skip branch selection entirely
+    // If no branches exist or fetch failed, show retry
     if (branches.length === 0) {
-        onBranchSelected?.();
-        return null;
+        return (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <div className="bg-muted rounded-full p-4 mb-4">
+                    {error ? <AlertCircle className="w-8 h-8 text-destructive" /> : <Building2 className="w-8 h-8 text-muted-foreground" />}
+                </div>
+                <h3 className="text-lg font-semibold mb-2">
+                    {error ? 'Ошибка загрузки' : 'Филиалы не найдены'}
+                </h3>
+                <p className="text-muted-foreground mb-4 max-w-[280px] text-sm">
+                    {error ? 'Большое количество запросов к серверу. Пожалуйста, подождите минуту и повторите попытку.' : 'Не удалось загрузить список филиалов. Проверьте соединение.'}
+                </p>
+                <Button onClick={manualRetry}>
+                    Повторить загрузку
+                </Button>
+            </div>
+        );
     }
 
     // If branch already selected, show compact view to change it

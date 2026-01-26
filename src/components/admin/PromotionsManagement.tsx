@@ -38,6 +38,7 @@ export function PromotionsManagement() {
     const [loading, setLoading] = useState(true);
     const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
     const [isCreating, setIsCreating] = useState(false);
+    const [isScheduleEnabled, setIsScheduleEnabled] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -159,6 +160,7 @@ export function PromotionsManagement() {
             notify_clients: promotion.notify_clients || false,
             notification_message: promotion.notification_message || ''
         });
+        setIsScheduleEnabled(!!(promotion.valid_days || promotion.time_start));
         setIsCreating(true);
     };
 
@@ -183,6 +185,7 @@ export function PromotionsManagement() {
             notify_clients: false,
             notification_message: ''
         });
+        setIsScheduleEnabled(false);
         setEditingPromotion(null);
         setIsCreating(false);
     };
@@ -398,62 +401,83 @@ export function PromotionsManagement() {
 
                                 {/* Дни недели (для авто) */}
                                 {formData.is_auto_apply && (
-                                    <div className="col-span-2">
-                                        <Label>Дни недели (опционально)</Label>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {[
-                                                { value: '1', label: 'Пн' },
-                                                { value: '2', label: 'Вт' },
-                                                { value: '3', label: 'Ср' },
-                                                { value: '4', label: 'Чт' },
-                                                { value: '5', label: 'Пт' },
-                                                { value: '6', label: 'Сб' },
-                                                { value: '7', label: 'Вс' },
-                                            ].map((day) => {
-                                                const days = formData.valid_days ? formData.valid_days.split(',') : [];
-                                                const isChecked = days.includes(day.value);
-                                                return (
-                                                    <button
-                                                        key={day.value}
-                                                        type="button"
-                                                        className={`px-3 py-1 rounded-full text-sm border ${isChecked ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-                                                        onClick={() => {
-                                                            if (isChecked) {
-                                                                setFormData({ ...formData, valid_days: days.filter(d => d !== day.value).join(',') });
-                                                            } else {
-                                                                setFormData({ ...formData, valid_days: [...days, day.value].sort().join(',') });
-                                                            }
-                                                        }}
-                                                    >
-                                                        {day.label}
-                                                    </button>
-                                                );
-                                            })}
+                                    <div className="col-span-2 border rounded-lg p-3 space-y-3 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Switch
+                                                checked={isScheduleEnabled}
+                                                onCheckedChange={(checked) => {
+                                                    setIsScheduleEnabled(checked);
+                                                    if (!checked) {
+                                                        setFormData({
+                                                            ...formData,
+                                                            valid_days: '',
+                                                            time_start: '',
+                                                            time_end: ''
+                                                        });
+                                                    }
+                                                }}
+                                            />
+                                            <Label>⏰ Ограничить по времени/дням</Label>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-1">Пусто = все дни</p>
-                                    </div>
-                                )}
 
-                                {/* Время (для авто) */}
-                                {formData.is_auto_apply && (
-                                    <>
-                                        <div>
-                                            <Label>Время с</Label>
-                                            <Input
-                                                type="time"
-                                                value={formData.time_start}
-                                                onChange={(e) => setFormData({ ...formData, time_start: e.target.value })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label>Время до</Label>
-                                            <Input
-                                                type="time"
-                                                value={formData.time_end}
-                                                onChange={(e) => setFormData({ ...formData, time_end: e.target.value })}
-                                            />
-                                        </div>
-                                    </>
+                                        {isScheduleEnabled && (
+                                            <>
+                                                <div className="mt-3">
+                                                    <Label>Дни недели (опционально)</Label>
+                                                    <div className="flex flex-wrap gap-2 mt-2">
+                                                        {[
+                                                            { value: '1', label: 'Пн' },
+                                                            { value: '2', label: 'Вт' },
+                                                            { value: '3', label: 'Ср' },
+                                                            { value: '4', label: 'Чт' },
+                                                            { value: '5', label: 'Пт' },
+                                                            { value: '6', label: 'Сб' },
+                                                            { value: '7', label: 'Вс' },
+                                                        ].map((day) => {
+                                                            const days = formData.valid_days ? formData.valid_days.split(',') : [];
+                                                            const isChecked = days.includes(day.value);
+                                                            return (
+                                                                <button
+                                                                    key={day.value}
+                                                                    type="button"
+                                                                    className={`px-3 py-1 rounded-full text-sm border ${isChecked ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
+                                                                    onClick={() => {
+                                                                        if (isChecked) {
+                                                                            setFormData({ ...formData, valid_days: days.filter(d => d !== day.value).join(',') });
+                                                                        } else {
+                                                                            setFormData({ ...formData, valid_days: [...days, day.value].sort().join(',') });
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    {day.label}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-1">Пусто = все дни</p>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4 mt-3">
+                                                    <div>
+                                                        <Label>Время с</Label>
+                                                        <Input
+                                                            type="time"
+                                                            value={formData.time_start}
+                                                            onChange={(e) => setFormData({ ...formData, time_start: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label>Время до</Label>
+                                                        <Input
+                                                            type="time"
+                                                            value={formData.time_end}
+                                                            onChange={(e) => setFormData({ ...formData, time_end: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 )}
 
                                 <div className="col-span-2 flex items-center gap-2">
@@ -469,7 +493,13 @@ export function PromotionsManagement() {
                                     <div className="flex items-center gap-2">
                                         <Switch
                                             checked={formData.notify_clients}
-                                            onCheckedChange={(checked) => setFormData({ ...formData, notify_clients: checked })}
+                                            onCheckedChange={(checked) => setFormData({
+                                                ...formData,
+                                                notify_clients: checked,
+                                                notification_message: checked && !formData.notification_message
+                                                    ? "🔥 Новая акция! {name} — скидка {discount}%!"
+                                                    : formData.notification_message
+                                            })}
                                         />
                                         <Label>🔔 Уведомить клиентов об акции</Label>
                                     </div>
@@ -482,12 +512,15 @@ export function PromotionsManagement() {
                                                 onChange={(e) => setFormData({ ...formData, notification_message: e.target.value })}
                                                 placeholder="🔥 Новая акция! {name} — скидка {discount}%!"
                                             />
-                                            <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5 flex-wrap">
-                                                <span>Доступные переменные:</span>
-                                                <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-primary text-[10px] sm:text-xs">{"{name}"}</code>
-                                                <span>— название акции,</span>
-                                                <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-primary text-[10px] sm:text-xs">{"{discount}"}</code>
-                                                <span>— размер скидки</span>
+                                            <div className="text-xs text-muted-foreground mt-2 flex flex-col gap-1">
+                                                <div className="flex items-center gap-1.5">
+                                                    <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-primary text-[10px] sm:text-xs">{"{name}"}</code>
+                                                    <span>— название акции</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-primary text-[10px] sm:text-xs">{"{discount}"}</code>
+                                                    <span>— размер скидки</span>
+                                                </div>
                                             </div>
                                         </div>
                                     )}

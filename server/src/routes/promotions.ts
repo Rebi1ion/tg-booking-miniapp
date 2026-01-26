@@ -76,19 +76,7 @@ router.get('/auto-active', async (req, res) => {
             orderBy: { discount_value: 'desc' }
         });
 
-        // Filter by day and time
-        let activePromos = promotions.filter(promo => {
-            // Check day of week
-            if (promo.valid_days) {
-                const days = promo.valid_days.split(',').map(d => parseInt(d.trim()));
-                if (!days.includes(dayOfWeek)) return false;
-            }
-            // Check time
-            if (promo.time_start && promo.time_end) {
-                if (currentTime < promo.time_start || currentTime > promo.time_end) return false;
-            }
-            return true;
-        });
+
 
         // Check usage limits if user_id provided
         const userId = req.query.user_id ? String(req.query.user_id) : null;
@@ -96,39 +84,23 @@ router.get('/auto-active', async (req, res) => {
             const userUsages = await prisma.promoUsage.findMany({
                 where: {
                     user_id: userId,
-                    promotion_id: { in: activePromos.map(p => p.id) }
+                    promotion_id: { in: promotions.map(p => p.id) }
                 }
             });
 
-            const usageMap = new Map();
-            userUsages.forEach(usage => {
-                // Simplified: if usage exists and max_uses is 1, exclude.
-            });
-
-            const usedPromoIds = userUsages.map(u => u.promotion_id);
-            activePromos = activePromos.filter(p => {
-                // Check if user has used this promo 
-                // (Currently logic assumes max_uses_per_user=1 mostly, or that count is checked elsewhere but here we just hide if used once? 
-                // No, validate endpoint checks count >= max. 
-                // But since we can only store one record due to unique constraint, effectively max is 1.
-                // So if used at all, we hide it if max_uses <= 1. 
-                // IF max_uses > 1, we allow it (and validations will happen later on booking if count exceeded - though count can't exceed 1 with current schema...)
-                // Correction: We need to fix the logic:
-                // IF usedPromoIds.includes(p.id) AND p.max_uses_per_user <= 1, THEN exclude.
-                // IF usedPromoIds.includes(p.id) AND p.max_uses_per_user > 1, THEN include (allow re-use up to max? But DB constraint stops it).
-                // For now, assuming standard case is 1-time use.
-
-                if (usedPromoIds.includes(p.id)) {
-                    // If promo is single-use per user, hide it
-                    if (p.max_uses_per_user <= 1) return false;
-                    // If allows multiple uses, we show it (but db constraint will block 2nd use currently - known limitation)
-                    return true;
+            // Filter out those with user limits reached
+            const filteredPromos = promotions.filter(p => {
+                const count = userUsages.filter(u => u.promotion_id === p.id).length;
+                if (p.max_uses_per_user > 0 && count >= p.max_uses_per_user) {
+                    return false;
                 }
                 return true;
             });
-        }
 
-        res.json(activePromos);
+            res.json(filteredPromos);
+        } else {
+            res.json(promotions);
+        }
     } catch (error: any) {
         console.error("GET /api/promotions/auto-active error:", error);
         res.status(500).json({ error: error.message });
@@ -144,7 +116,7 @@ router.post('/', async (req, res) => {
         is_auto_apply, valid_days, time_start, time_end,
         notify_clients, notification_message
     } = req.body;
-    console.log("POST /api/promotions hit:", { name, promo_code, is_auto_apply });
+    console.log("POST /api/promotions hit. Body:", JSON.stringify(req.body, null, 2));
     try {
         const promotion = await prisma.promotion.create({
             data: {
@@ -176,6 +148,7 @@ router.post('/', async (req, res) => {
                 .replace(/{discount}/g, promotion.discount_value.toString());
 
             // Run in background
+            console.log(`🔔 Triggering notification logic for ${promotion.name}`);
             sendMassNotification(msg).then(res => {
                 console.log(`Promotion notification sent: ${res.sent} sent, ${res.failed} failed`);
             }).catch(err => {
@@ -377,8 +350,8 @@ router.post('/use', async (req, res) => {
 
 // POST /api/promotions/check-date - check for date-based discounts (no promo code required)
 router.post('/check-date', async (req, res) => {
-    const { booking_date, service_id, user_id } = req.body;
-    console.log("POST /api/promotions/check-date hit:", { booking_date, service_id, user_id });
+    const { booking_date, booking_time, service_id, user_id } = req.body;
+    console.log("POST /api/promotions/check-date hit:", { booking_date, booking_time, service_id, user_id });
     try {
         if (!booking_date) {
             return res.json({ found: false });
@@ -431,11 +404,41 @@ router.post('/check-date', async (req, res) => {
 
         // Check if any applies to the service
         for (const promotion of promotions) {
+            console.log(`🔍 Checking promo "${promotion.name}": valid_days=${promotion.valid_days}, time_start=${promotion.time_start}, time_end=${promotion.time_end}`);
+
             // Check service applicability
             if (promotion.applies_to && promotion.applies_to !== 'all' && service_id) {
                 const serviceIds = promotion.applies_to.split(',').map(s => s.trim());
                 if (!serviceIds.includes(service_id)) {
+                    console.log(`   ❌ Skipped: service not in applies_to`);
                     continue; // Skip, doesn't apply to this service
+                }
+            }
+
+            // Check day of week validity
+            if (promotion.valid_days) {
+                // bookingDateObj is UTC midnight of the booking date
+                // We need day of week: 0-6 (Sun-Sat)
+                // Map to 1-7 (Mon-Sun)
+                const day = bookingDateObj.getUTCDay(); // 0 is Sunday
+                const dayMapped = day === 0 ? 7 : day;
+
+                const validDays = promotion.valid_days.split(',').map(d => parseInt(d.trim()));
+                console.log(`   📅 Day check: booking=${dayMapped}, valid=${validDays.join(',')}`);
+                if (!validDays.includes(dayMapped)) {
+                    console.log(`   ❌ Skipped: day not valid`);
+                    continue;
+                }
+            }
+
+            // Check time validity
+            if (booking_time && promotion.time_start && promotion.time_end) {
+                // Determine checking logic: 
+                // String comparison works for HH:MM format ("09:00" < "12:00")
+                console.log(`   ⏰ Time check: booking=${booking_time}, valid=${promotion.time_start}-${promotion.time_end}`);
+                if (booking_time < promotion.time_start || booking_time > promotion.time_end) {
+                    console.log(`   ❌ Skipped: time not valid`);
+                    continue;
                 }
             }
 
