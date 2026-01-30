@@ -9,10 +9,20 @@ import { shopConfig } from '@/config/shopConfig';
 import { Star, ChevronLeft, ChevronRight, Search, Flame } from 'lucide-react';
 
 export const ServiceSelection = () => {
-    const { services, setService, selectedService, user } = useAppStore();
-    const [activeCategory, setActiveCategory] = useState<string | null>(null);
-    const [activeHall, setActiveHall] = useState<string | null>(null);
-    const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+    const {
+        services,
+        setService,
+        selectedService,
+        user,
+        activeCategory,
+        setActiveCategory,
+        activeHall,
+        setActiveHall,
+        activeSubcategory,
+        setActiveSubcategory
+    } = useAppStore();
+
+    // Refs for scroll container
     const tabsRef = useRef<HTMLDivElement>(null);
     const subTabsRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);

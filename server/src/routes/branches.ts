@@ -24,7 +24,15 @@ router.get('/all', async (req, res) => {
     try {
         const branches = await prisma.branch.findMany({
             include: {
-                masters: { include: { master: true } },
+                masters: {
+                    include: {
+                        master: {
+                            include: {
+                                services: true
+                            }
+                        }
+                    }
+                },
                 services: { include: { service: true } }
             },
             orderBy: { created_at: 'desc' }

@@ -18,7 +18,13 @@ interface Branch {
     end_hour: number;
     is_active: boolean;
     created_at: string;
-    masters?: { master: { id: string; name: string } }[];
+    masters?: {
+        master: {
+            id: string;
+            name: string;
+            services?: { service_id: string }[];
+        }
+    }[];
     services?: { service: { id: string; name: string } }[];
 }
 
@@ -46,8 +52,8 @@ export function BranchesManagement() {
         name: '',
         address: '',
         phone: '',
-        start_hour: 10,
-        end_hour: 20,
+        start_hour: '10',
+        end_hour: '20',
         is_active: true
     });
 
@@ -84,10 +90,16 @@ export function BranchesManagement() {
                 ? `${shopConfig.apiUrl}/branches/${editingBranch.id}`
                 : `${shopConfig.apiUrl}/branches`;
 
+            const payload = {
+                ...formData,
+                start_hour: formData.start_hour === '' ? 0 : parseInt(formData.start_hour),
+                end_hour: formData.end_hour === '' ? 23 : parseInt(formData.end_hour)
+            };
+
             await fetch(url, {
                 method: editingBranch ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             resetForm();
@@ -116,8 +128,8 @@ export function BranchesManagement() {
             name: branch.name,
             address: branch.address || '',
             phone: branch.phone || '',
-            start_hour: branch.start_hour,
-            end_hour: branch.end_hour,
+            start_hour: branch.start_hour.toString(),
+            end_hour: branch.end_hour.toString(),
             is_active: branch.is_active
         });
         setIsCreating(true);
@@ -153,7 +165,7 @@ export function BranchesManagement() {
     };
 
     const resetForm = () => {
-        setFormData({ name: '', address: '', phone: '', start_hour: 10, end_hour: 20, is_active: true });
+        setFormData({ name: '', address: '', phone: '', start_hour: '10', end_hour: '20', is_active: true });
         setEditingBranch(null);
         setIsCreating(false);
     };
@@ -219,6 +231,22 @@ export function BranchesManagement() {
         );
     }
 
+    // Helper to calculate unique services count from branch masters
+    const getUniqueServicesCount = (branch: Branch) => {
+        if (!branch.masters || branch.masters.length === 0) return 0;
+
+        const serviceIds = new Set<string>();
+        branch.masters.forEach(mb => {
+            if (mb.master.services) {
+                mb.master.services.forEach((ms: any) => {
+                    serviceIds.add(ms.service_id);
+                });
+            }
+        });
+
+        return serviceIds.size;
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -258,11 +286,11 @@ export function BranchesManagement() {
                                 </div>
                                 <div>
                                     <Label>Начало работы</Label>
-                                    <Input type="number" min="0" max="23" value={formData.start_hour} onChange={(e) => setFormData({ ...formData, start_hour: parseInt(e.target.value) || 10 })} />
+                                    <Input type="number" min="0" max="23" value={formData.start_hour} onChange={(e) => setFormData({ ...formData, start_hour: e.target.value })} />
                                 </div>
                                 <div>
                                     <Label>Конец работы</Label>
-                                    <Input type="number" min="0" max="24" value={formData.end_hour} onChange={(e) => setFormData({ ...formData, end_hour: parseInt(e.target.value) || 20 })} />
+                                    <Input type="number" min="0" max="24" value={formData.end_hour} onChange={(e) => setFormData({ ...formData, end_hour: e.target.value })} />
                                 </div>
                                 <div className="col-span-2 flex items-center gap-2">
                                     <Switch checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} />
@@ -305,7 +333,7 @@ export function BranchesManagement() {
                                         </div>
                                         <div className="flex flex-wrap gap-2 text-xs">
                                             <Badge variant="secondary"><Users className="w-3 h-3 mr-1" />{branch.masters?.length || 0} мастеров</Badge>
-                                            <Badge variant="secondary"><Scissors className="w-3 h-3 mr-1" />{branch.services?.length || 0} услуг</Badge>
+                                            <Badge variant="secondary"><Scissors className="w-3 h-3 mr-1" />{getUniqueServicesCount(branch)} услуг</Badge>
                                         </div>
                                     </div>
                                     <div className="flex gap-1">

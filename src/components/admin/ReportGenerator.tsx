@@ -34,34 +34,10 @@ export default function ReportGenerator({ apiUrl }: ReportGeneratorProps) {
         try {
             const startStr = format(startDate, 'yyyy-MM-dd');
             const endStr = format(endDate, 'yyyy-MM-dd');
+            const downloadUrl = `${apiUrl}/reports/bookings?startDate=${startStr}&endDate=${endStr}`;
 
-            const response = await fetch(
-                `${apiUrl}/reports/bookings?startDate=${startStr}&endDate=${endStr}`,
-                {
-                    headers: {
-                        'ngrok-skip-browser-warning': 'true'
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error('Ошибка генерации отчёта');
-            }
-
-            // Get as arrayBuffer first, then create blob with correct type
-            const arrayBuffer = await response.arrayBuffer();
-            const blob = new Blob([arrayBuffer], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
-
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `bookings_${format(startDate, 'dd_MM_yyyy')}_${format(endDate, 'dd_MM_yyyy')}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
+            // Direct open avoids blob issues on mobile/webviews
+            window.open(downloadUrl, '_blank');
         } catch (error) {
             console.error('Report download error:', error);
             alert('Ошибка при скачивании отчёта');

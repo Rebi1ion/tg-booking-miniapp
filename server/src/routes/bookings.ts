@@ -166,7 +166,8 @@ router.post('/', async (req, res) => {
                 status,
                 payment_id,
                 client_name,
-                client_phone
+                client_phone,
+                custom_price
             },
             include: {
                 service: true,

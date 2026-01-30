@@ -140,44 +140,54 @@ export const TodaySchedule = () => {
                                 </div>
 
                                 {/* Услуга */}
-                                <div className="flex items-center gap-2">
-                                    <Star className="h-4 w-4 text-yellow-500" />
-                                    <span className="font-medium">{booking.service?.name || 'Услуга не указана'}</span>
+                                <div className="flex items-start gap-2 mb-2 w-full">
+                                    <Star className="h-5 w-5 text-yellow-500 mt-[2px] flex-shrink-0" />
+                                    <span className="font-medium block break-words leading-tight flex-1">{booking.service?.name || 'Услуга не указана'}</span>
                                 </div>
 
                                 {/* Мастер */}
-                                <p className="text-sm pl-6">
+                                <p className="text-sm pl-7 mb-2">
                                     <span className="opacity-70">Мастер:</span> <span className="font-medium">{booking.master?.name || 'Не указан'}</span>
                                 </p>
 
                                 {/* Цена */}
-                                <div className="flex items-center gap-2 pl-6">
+                                <div className="flex items-center gap-2 pl-7">
                                     <span className="text-sm opacity-70">Цена:</span>
-                                    <span className="font-semibold text-blue-600">{booking.service?.price || 0} ₽</span>
+                                    {booking.custom_price !== undefined && booking.custom_price !== null && booking.service?.price && booking.custom_price < booking.service.price ? (
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-sm text-muted-foreground line-through">{booking.service.price} ₽</span>
+                                            <span className="font-semibold text-green-600">{booking.custom_price} ₽</span>
+                                        </div>
+                                    ) : (
+                                        <span className="font-semibold text-blue-600">{booking.custom_price ?? booking.service?.price ?? 0} ₽</span>
+                                    )}
                                 </div>
 
                                 {/* Клиент */}
                                 <div className="mt-2 text-sm">
                                     <div className="flex items-center gap-2 opacity-70 mb-1">
-                                        <User className="h-3 w-3" />
+                                        <User className="h-4 w-4" />
                                         <span>Клиент:</span>
-                                    </div>
-                                    <div className="pl-5 flex flex-col">
-                                        <span className="font-medium leading-tight">
-                                            {booking.user?.first_name || booking.client_name || 'Гость'}
+                                        <span className="font-medium ml-1">
+                                            {[
+                                                booking.user?.first_name,
+                                                booking.user?.last_name || ''
+                                            ].filter(Boolean).join(' ') || booking.client_name || 'Гость'}
                                         </span>
+                                    </div>
+                                    <div className="flex flex-col gap-0.5">
                                         {booking.user?.username && (
                                             <a
                                                 href={`https://t.me/${booking.user.username}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-xs text-blue-500 hover:underline leading-tight"
+                                                className="text-xs text-blue-500 hover:underline leading-tight w-fit"
                                             >
                                                 @{booking.user.username}
                                             </a>
                                         )}
                                         {booking.user?.telegram_id && (
-                                            <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                            <span className="text-[10px] text-muted-foreground font-mono">
                                                 ID: {booking.user.telegram_id.toString()}
                                             </span>
                                         )}

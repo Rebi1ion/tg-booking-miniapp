@@ -48,12 +48,20 @@ interface AppState {
     masterServices: MasterService[];
     userBookings: Booking[];
 
+    activeCategory: string | null;
+    activeHall: string | null;
+    activeSubcategory: string | null;
+
     // Actions
     setBranch: (branch: Branch | null) => Promise<void>;
     setService: (service: Service | null) => void;
     setMaster: (master: Master | null) => void;
     setDate: (date: Date | null) => void;
     setTimeSlot: (time: string | null) => void;
+
+    setActiveCategory: (category: string | null) => void;
+    setActiveHall: (hall: string | null) => void;
+    setActiveSubcategory: (subcategory: string | null) => void;
 
     nextStep: () => void;
     prevStep: () => void;
@@ -119,6 +127,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     masters: [],
     masterServices: [],
     userBookings: [],
+
+    activeCategory: 'recommended',
+    activeHall: null,
+    activeSubcategory: null,
+
+    setActiveCategory: (category) => set({ activeCategory: category }),
+    setActiveHall: (hall) => set({ activeHall: hall }),
+    setActiveSubcategory: (subcategory) => set({ activeSubcategory: subcategory }),
 
     setBranch: async (branch) => {
         const currentBranch = get().selectedBranch;

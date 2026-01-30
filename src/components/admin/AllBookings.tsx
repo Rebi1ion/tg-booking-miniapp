@@ -174,10 +174,19 @@ export const AllBookings = () => {
                                                 {format(new Date(booking.start_time), 'HH:mm')} — {format(new Date(booking.end_time), 'HH:mm')}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Star className="h-4 w-4 text-yellow-500" />
-                                            <span className="font-medium">{booking.service?.name}</span>
-                                            <span className="text-blue-600 font-semibold">{booking.service?.price} ₽</span>
+                                        <div className="flex items-start gap-2 w-full">
+                                            <Star className="h-4 w-4 text-yellow-500 mt-[3px] flex-shrink-0" />
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                <span className="font-medium block break-words leading-tight">{booking.service?.name}</span>
+                                            </div>
+                                            {booking.custom_price !== undefined && booking.custom_price !== null && booking.service?.price && booking.custom_price < booking.service.price ? (
+                                                <div className="flex flex-col items-end flex-shrink-0 ml-auto self-start mt-[1px]">
+                                                    <span className="text-xs text-muted-foreground line-through">{booking.service.price} ₽</span>
+                                                    <span className="text-green-600 font-semibold whitespace-nowrap">{booking.custom_price} ₽</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-blue-600 font-semibold whitespace-nowrap flex-shrink-0 ml-auto self-start mt-[1px]">{booking.custom_price ?? booking.service?.price} ₽</span>
+                                            )}
                                         </div>
                                     </div>
                                     <span className={cn(
@@ -193,11 +202,14 @@ export const AllBookings = () => {
                                     <div className="flex items-center gap-2 text-muted-foreground mb-1">
                                         <User className="h-3 w-3" />
                                         <span>Клиент:</span>
-                                    </div>
-                                    <div className="pl-5 flex flex-col">
-                                        <span className="font-medium leading-tight">
-                                            {booking.user?.first_name || booking.client_name || 'Гость'}
+                                        <span className="font-medium ml-1">
+                                            {[
+                                                booking.user?.first_name,
+                                                booking.user?.last_name || ''
+                                            ].filter(Boolean).join(' ') || booking.client_name || 'Гость'}
                                         </span>
+                                    </div>
+                                    <div className="flex flex-col gap-0.5">
                                         {booking.user?.username && (
                                             <a
                                                 href={`https://t.me/${booking.user.username}`}
@@ -209,7 +221,7 @@ export const AllBookings = () => {
                                             </a>
                                         )}
                                         {booking.user?.telegram_id && (
-                                            <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                            <span className="text-[10px] text-muted-foreground font-mono">
                                                 ID: {booking.user.telegram_id.toString()}
                                             </span>
                                         )}

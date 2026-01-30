@@ -33,6 +33,7 @@ export interface Master {
     start_hour?: number;
     end_hour?: number;
     slot_interval?: number;
+    services?: Service[];
 }
 
 export interface Booking {
@@ -46,4 +47,5 @@ export interface Booking {
     payment_id?: string;
     client_phone?: string;
     client_name?: string;
+    custom_price?: number;
 }

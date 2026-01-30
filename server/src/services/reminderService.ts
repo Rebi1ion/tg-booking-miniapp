@@ -45,7 +45,14 @@ export const notifyAdminsNewBooking = async (booking: any) => {
     const timeStr = `${startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: tz })} — ${endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: tz })}`;
 
     const serviceName = booking.service?.name || 'Не указана';
-    const servicePrice = booking.service?.price || 0;
+    const originalPrice = booking.service?.price || 0;
+    const finalPrice = booking.custom_price !== null && booking.custom_price !== undefined ? booking.custom_price : originalPrice;
+
+    let priceDisplay = `${finalPrice} ₽`;
+    if (finalPrice < originalPrice) {
+        priceDisplay = `${finalPrice} ₽ (до скидки: ${originalPrice} ₽)`;
+    }
+
     const masterName = booking.master?.name || 'Не указан';
     const clientName = booking.client_name || booking.user?.first_name || 'Гость';
     const clientPhone = booking.client_phone && booking.client_phone !== 'N/A' ? booking.client_phone : 'Не указан';
@@ -58,7 +65,7 @@ export const notifyAdminsNewBooking = async (booking: any) => {
 ⏰ <b>Время:</b> ${timeStr}
 
 ⭐ <b>Услуга:</b> ${serviceName}
-💰 <b>Цена:</b> ${servicePrice} ₽
+💰 <b>Цена:</b> ${priceDisplay}
 👤 <b>Мастер:</b> ${masterName}
 
 👨‍💼 <b>Клиент:</b> ${clientName} ${clientUsername}

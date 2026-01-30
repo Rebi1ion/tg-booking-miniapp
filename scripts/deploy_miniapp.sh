@@ -214,6 +214,9 @@ sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma
 
 # Устанавливаем зависимости
 npm install
+# Ensure file upload dependencies are installed
+npm install multer
+npm install -D @types/multer
 
 # Генерируем Prisma клиент и применяем миграции
 npx prisma generate

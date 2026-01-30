@@ -3,18 +3,15 @@ import type { Master, Service } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Pencil, Trash2, X, Check, User } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, X, Check, User, Upload } from 'lucide-react';
 
 import { shopConfig } from '@/config/shopConfig';
 
 const API_URL = shopConfig.apiUrl;
-
-interface MasterWithServices extends Master {
-    services?: { id: string; name: string }[];
-}
+const BASE_URL = shopConfig.baseUrl;
 
 export const MastersManagement = () => {
-    const [masters, setMasters] = useState<MasterWithServices[]>([]);
+    const [masters, setMasters] = useState<Master[]>([]);
     const [allServices, setAllServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -75,7 +72,7 @@ export const MastersManagement = () => {
         setIsAdding(false);
     };
 
-    const handleEdit = async (master: MasterWithServices) => {
+    const handleEdit = async (master: Master) => {
         setEditingId(master.id);
         setFormData({
             name: master.name,
@@ -206,6 +203,235 @@ export const MastersManagement = () => {
         );
     }
 
+    // Inline render function for the form to reuse it
+    const RenderForm = () => (
+        <Card className="border-primary mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <CardContent className="p-4 space-y-3">
+                <Input
+                    placeholder="Имя мастера *"
+                    value={formData.name}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
+                />
+                <Input
+                    placeholder="Должность (например: Топ-стилист)"
+                    value={formData.role}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, role: e.target.value })}
+                />
+                <div className="space-y-2">
+                    <label className="text-xs text-muted-foreground uppercase font-bold">Фотография</label>
+                    <div className="flex items-center gap-4 p-3 border rounded-md border-dashed bg-muted/20">
+                        {formData.photo_url ? (
+                            <div className="relative group">
+                                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/20 shadow-sm">
+                                    <img
+                                        src={formData.photo_url.startsWith('http') ? formData.photo_url : `${BASE_URL}${formData.photo_url}`}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, photo_url: '' })}
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center border-2 border-dashed border-muted-foreground/20">
+                                <User className="h-8 w-8 text-muted-foreground/40" />
+                            </div>
+                        )}
+
+                        <div className="flex-1 space-y-2">
+                            {formData.photo_url ? (
+                                <div className="text-sm">
+                                    <p className="font-medium text-green-600 flex items-center gap-1">
+                                        <Check className="w-4 h-4" /> Фото загружено
+                                    </p>
+                                    <p className="text-xs text-muted-foreground break-all max-w-[200px] truncate">
+                                        {formData.photo_url.split('/').pop()}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="text-sm text-muted-foreground">
+                                    <p>Загрузите фото мастера</p>
+                                    <p className="text-xs opacity-70">JPG, PNG, WEBP до 5 MB</p>
+                                </div>
+                            )}
+
+                            <div className="relative">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+
+                                        const formDataUpload = new FormData();
+                                        formDataUpload.append('file', file);
+
+                                        try {
+                                            const res = await fetch(`${API_URL}/upload`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'ngrok-skip-browser-warning': 'true'
+                                                },
+                                                body: formDataUpload
+                                            });
+                                            const data = await res.json();
+                                            if (data.url) {
+                                                setFormData(prev => ({ ...prev, photo_url: data.url }));
+                                            } else {
+                                                alert('Ошибка загрузки: неверный ответ сервера');
+                                            }
+                                        } catch (error) {
+                                            console.error('Upload failed:', error);
+                                            alert('Ошибка загрузки фото. Убедитесь, что backend поддерживает загрузку файлов.');
+                                        }
+                                    }}
+                                    className="hidden"
+                                    id="photo-upload-input"
+                                />
+                                <label
+                                    htmlFor="photo-upload-input"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md text-sm font-medium transition-colors cursor-pointer shadow-sm"
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    {formData.photo_url ? 'Заменить' : 'Выбрать файл'}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <Input
+                    placeholder="Описание / биография"
+                    value={formData.bio}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, bio: e.target.value })}
+                />
+                <div>
+                    <label className="text-[10px] text-muted-foreground uppercase font-bold">Telegram ID (для доступа к панели)</label>
+                    <Input
+                        placeholder="Например: 123456789"
+                        value={formData.telegram_id}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setFormData({ ...formData, telegram_id: val });
+                        }}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                        Мастер может узнать ID командой /myid в боте
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                    <div>
+                        <label className="text-[10px] text-muted-foreground uppercase font-bold">Начало (ч)</label>
+                        <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={formData.start_hour}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                setFormData({ ...formData, start_hour: val });
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] text-muted-foreground uppercase font-bold">Конец (ч)</label>
+                        <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={formData.end_hour}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                setFormData({ ...formData, end_hour: val });
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] text-muted-foreground uppercase font-bold">Интервал (м)</label>
+                        <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={formData.slot_interval}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                setFormData({ ...formData, slot_interval: val });
+                            }}
+                        />
+                    </div>
+                </div>
+
+                {/* Working Days */}
+                <div>
+                    <p className="text-sm text-muted-foreground mb-2">Рабочие дни:</p>
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            { id: '1', label: 'Пн' },
+                            { id: '2', label: 'Вт' },
+                            { id: '3', label: 'Ср' },
+                            { id: '4', label: 'Чт' },
+                            { id: '5', label: 'Пт' },
+                            { id: '6', label: 'Сб' },
+                            { id: '7', label: 'Вс' },
+                        ].map(day => (
+                            <Button
+                                key={day.id}
+                                type="button"
+                                size="sm"
+                                variant={formData.work_days?.split(',').includes(day.id) ? "default" : "outline"}
+                                onClick={() => toggleDay(day.id)}
+                                className={formData.work_days?.split(',').includes(day.id) ? "bg-green-600 hover:bg-green-700" : ""}
+                            >
+                                {day.label}
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <p className="text-sm text-muted-foreground mb-2">Услуги мастера:</p>
+                    <div className="mb-2">
+                        <Input
+                            placeholder="Поиск услуги..."
+                            value={serviceSearchQuery}
+                            onChange={(e) => setServiceSearchQuery(e.target.value)}
+                            className="h-8 text-xs"
+                        />
+                    </div>
+                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 border rounded-md">
+                        {allServices
+                            .filter(s => s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase()))
+                            .map(service => (
+                                <Button
+                                    key={service.id}
+                                    size="sm"
+                                    variant={formData.selectedServices.includes(service.id) ? "default" : "outline"}
+                                    onClick={() => toggleService(service.id)}
+                                    className="text-xs"
+                                >
+                                    {service.name}
+                                </Button>
+                            ))}
+                        {allServices.length === 0 && (
+                            <p className="text-xs text-muted-foreground p-2">Сначала добавьте услуги</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSave} disabled={!formData.name.trim()}>
+                        <Check className="h-4 w-4 mr-1" /> Сохранить
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={resetForm}>
+                        <X className="h-4 w-4 mr-1" /> Отмена
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -217,192 +443,53 @@ export const MastersManagement = () => {
                 )}
             </div>
 
-            {/* Add/Edit Form */}
-            {(isAdding || editingId) && (
-                <Card className="border-primary">
-                    <CardContent className="p-4 space-y-3">
-                        <Input
-                            placeholder="Имя мастера *"
-                            value={formData.name}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
-                        />
-                        <Input
-                            placeholder="Должность (например: Топ-стилист)"
-                            value={formData.role}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, role: e.target.value })}
-                        />
-                        <Input
-                            placeholder="URL фото"
-                            value={formData.photo_url}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, photo_url: e.target.value })}
-                        />
-                        <Input
-                            placeholder="Описание / биография"
-                            value={formData.bio}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, bio: e.target.value })}
-                        />
-                        <div>
-                            <label className="text-[10px] text-muted-foreground uppercase font-bold">Telegram ID (для доступа к панели)</label>
-                            <Input
-                                placeholder="Например: 123456789"
-                                value={formData.telegram_id}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                    const val = e.target.value.replace(/\D/g, '');
-                                    setFormData({ ...formData, telegram_id: val });
-                                }}
-                            />
-                            <p className="text-[10px] text-muted-foreground mt-1">
-                                Мастер может узнать ID командой /myid в боте
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <label className="text-[10px] text-muted-foreground uppercase font-bold">Начало (ч)</label>
-                                <Input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={formData.start_hour}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        setFormData({ ...formData, start_hour: val });
-                                    }}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[10px] text-muted-foreground uppercase font-bold">Конец (ч)</label>
-                                <Input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={formData.end_hour}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        setFormData({ ...formData, end_hour: val });
-                                    }}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[10px] text-muted-foreground uppercase font-bold">Интервал (м)</label>
-                                <Input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={formData.slot_interval}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        setFormData({ ...formData, slot_interval: val });
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Working Days */}
-                        <div>
-                            <p className="text-sm text-muted-foreground mb-2">Рабочие дни:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {[
-                                    { id: '1', label: 'Пн' },
-                                    { id: '2', label: 'Вт' },
-                                    { id: '3', label: 'Ср' },
-                                    { id: '4', label: 'Чт' },
-                                    { id: '5', label: 'Пт' },
-                                    { id: '6', label: 'Сб' },
-                                    { id: '7', label: 'Вс' },
-                                ].map(day => (
-                                    <Button
-                                        key={day.id}
-                                        type="button"
-                                        size="sm"
-                                        variant={formData.work_days?.split(',').includes(day.id) ? "default" : "outline"}
-                                        onClick={() => toggleDay(day.id)}
-                                        className={formData.work_days?.split(',').includes(day.id) ? "bg-green-600 hover:bg-green-700" : ""}
-                                    >
-                                        {day.label}
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <p className="text-sm text-muted-foreground mb-2">Услуги мастера:</p>
-                            <div className="mb-2">
-                                <Input
-                                    placeholder="Поиск услуги..."
-                                    value={serviceSearchQuery}
-                                    onChange={(e) => setServiceSearchQuery(e.target.value)}
-                                    className="h-8 text-xs"
-                                />
-                            </div>
-                            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 border rounded-md">
-                                {allServices
-                                    .filter(s => s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase()))
-                                    .map(service => (
-                                        <Button
-                                            key={service.id}
-                                            size="sm"
-                                            variant={formData.selectedServices.includes(service.id) ? "default" : "outline"}
-                                            onClick={() => toggleService(service.id)}
-                                            className="text-xs"
-                                        >
-                                            {service.name}
-                                        </Button>
-                                    ))}
-                                {allServices.length === 0 && (
-                                    <p className="text-xs text-muted-foreground p-2">Сначала добавьте услуги</p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <Button size="sm" onClick={handleSave} disabled={!formData.name.trim()}>
-                                <Check className="h-4 w-4 mr-1" /> Сохранить
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={resetForm}>
-                                <X className="h-4 w-4 mr-1" /> Отмена
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+            {/* Add New Master Form (only when explicitly adding) */}
+            {isAdding && <RenderForm />}
 
             {/* Masters List */}
             {masters.map(master => (
-                <Card key={master.id} className={editingId === master.id ? 'opacity-50' : ''}>
-                    <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-3">
-                                {master.photo_url ? (
-                                    <img src={master.photo_url} alt={master.name} className="w-12 h-12 rounded-full object-cover" />
-                                ) : (
-                                    <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                                        <User className="h-6 w-6 text-muted-foreground" />
+                <React.Fragment key={master.id}>
+                    {/* Render form ABOVE the master card if we are editing this master */}
+                    {editingId === master.id && <RenderForm />}
+
+                    <Card className={editingId === master.id ? 'opacity-50 border-dashed' : ''}>
+                        <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3">
+                                    {master.photo_url ? (
+                                        <img src={master.photo_url.startsWith('http') ? master.photo_url : `${BASE_URL}${master.photo_url}`} alt={master.name} className="w-12 h-12 rounded-full object-cover" />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                                            <User className="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <h3 className="font-semibold">{master.name}</h3>
+                                        {master.role && <p className="text-sm text-muted-foreground">{master.role}</p>}
                                     </div>
-                                )}
-                                <div>
-                                    <h3 className="font-semibold">{master.name}</h3>
-                                    {master.role && <p className="text-sm text-muted-foreground">{master.role}</p>}
+                                </div>
+                                <div className="flex gap-1">
+                                    <Button size="sm" variant="ghost" onClick={() => handleEdit(master)} disabled={!!editingId && editingId !== master.id}>
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="text-red-500" onClick={() => handleDelete(master.id)} disabled={!!editingId}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             </div>
-                            <div className="flex gap-1">
-                                <Button size="sm" variant="ghost" onClick={() => handleEdit(master)}>
-                                    <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="ghost" className="text-red-500" onClick={() => handleDelete(master.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </div>
 
-                        {master.services && master.services.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                                {master.services.map(service => (
-                                    <span key={service.id} className="text-xs bg-secondary px-2 py-1 rounded">
-                                        {service.name}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                            {master.services && master.services.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                    {master.services.map(service => (
+                                        <span key={service.id} className="text-xs bg-secondary px-2 py-1 rounded">
+                                            {service.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </React.Fragment>
             ))}
 
             {

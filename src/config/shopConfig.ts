@@ -30,6 +30,9 @@ export interface ShopConfig {
   // For production: "https://api.yourdomain.com/api"
   apiUrl: string;
 
+  // Base URL for relative paths (e.g. uploads)
+  baseUrl: string;
+
   // Default booking hours (fallback if master doesn't have custom hours)
   bookingDefaults: {
     startHour: number;      // e.g. 9 for 9:00
@@ -72,6 +75,9 @@ export const shopConfig: ShopConfig = {
   // ----- API URL -----
   // Автоматически берётся из VITE_API_URL при сборке
   apiUrl: import.meta.env.VITE_API_URL || "http://localhost:3000/api",
+
+  // Base URL for static assets (derived from API URL)
+  baseUrl: (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api$/, ''),
 
   // ----- BOOKING DEFAULTS -----
   bookingDefaults: {

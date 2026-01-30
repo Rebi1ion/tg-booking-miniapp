@@ -390,6 +390,15 @@ export const initPaymentHandlers = (bot: Telegraf) => {
 
             // Notify admins about successful payment
             const ADMIN_IDS = (process.env.ADMIN_IDS || '').split(',').map(id => id.trim()).filter(id => id);
+
+            const paidAmount = payment.total_amount / 100;
+            const originalPrice = booking.service?.price || 0;
+            let priceText = `${paidAmount} ₽`;
+
+            if (originalPrice > paidAmount) {
+                priceText = `${paidAmount} ₽ (до скидки: ${originalPrice} ₽)`;
+            }
+
             for (const adminId of ADMIN_IDS) {
                 try {
                     await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -398,7 +407,7 @@ export const initPaymentHandlers = (bot: Telegraf) => {
                             `📅 ${date} в ${time}\n` +
                             `⭐ ${booking.service?.name}\n` +
                             `👤 Мастер: ${booking.master?.name}\n` +
-                            `💳 Сумма: ${payment.total_amount / 100} ₽\n` +
+                            `💳 Сумма: ${priceText}\n` +
                             `👤 Клиент: ${booking.user?.first_name || 'Не указан'}`,
                         parse_mode: 'HTML'
                     });

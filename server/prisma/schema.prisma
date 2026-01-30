@@ -116,6 +116,7 @@ model Booking {
   payment_id        String?
   client_phone      String?
   client_name       String?
+  custom_price      Int?
   reminder_24h_sent Boolean  @default(false)
   reminder_1h_sent  Boolean  @default(false)
   created_at        DateTime @default(now())

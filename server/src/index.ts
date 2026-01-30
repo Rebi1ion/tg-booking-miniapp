@@ -18,37 +18,38 @@ import promotionsRoutes from './routes/promotions';
 import settingsRoutes from './routes/settings';
 import branchesRoutes from './routes/branches';
 import importRoutes from './routes/import';
-import './services/reminderService'; // Root import for cron job
-import './services/botService'; // Telegram bot
-import './services/bookingCleanupService'; // Auto-cancel unpaid bookings
+import uploadRoutes from './routes/upload';
+import path from 'path';
+import './services/reminderService';
+import './services/botService';
+import './services/bookingCleanupService';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust proxy - required when behind nginx/reverse proxy
-// This fixes express-rate-limit X-Forwarded-For header issue
 app.set('trust proxy', 1);
 
-// Rate limiting - protect from DDoS
 const limiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '100'), // limit per IP
+    windowMs: 60 * 1000,
+    max: parseInt(process.env.RATE_LIMIT_REQUESTS_PER_MINUTE || '100'),
     message: { error: 'Too many requests, please try again later' },
     standardHeaders: true,
     legacyHeaders: false,
-    validate: false, // Disable validation to avoid X-Forwarded-For errors
+    validate: false,
 });
 
 app.use(limiter);
-
 
 app.use(cors({
     origin: '*',
     allowedHeaders: ['Content-Type', 'ngrok-skip-browser-warning']
 }));
 app.use(express.json());
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/services', servicesRoutes);
@@ -61,6 +62,7 @@ app.use('/api/promotions', promotionsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/branches', branchesRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });

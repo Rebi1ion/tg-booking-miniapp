@@ -17,6 +17,7 @@ interface Booking {
     client_phone?: string;
     service?: { name: string; price: number };
     user?: { first_name: string; username?: string };
+    custom_price?: number;
 }
 
 interface MasterAllBookingsProps {
@@ -141,9 +142,16 @@ export function MasterAllBookings({ masterId }: MasterAllBookingsProps) {
                                         </div>
                                     )}
 
-                                    {booking.service?.price && (
+                                    {(booking.service?.price || booking.custom_price !== undefined) && (
                                         <div className="text-primary font-medium">
-                                            {formatPrice(booking.service.price)}
+                                            {booking.custom_price !== undefined && booking.custom_price !== null && booking.service?.price && booking.custom_price < booking.service.price ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-sm text-muted-foreground line-through">{formatPrice(booking.service.price)}</span>
+                                                    <span className="text-green-600 font-medium">{formatPrice(booking.custom_price)}</span>
+                                                </div>
+                                            ) : (
+                                                formatPrice(booking.custom_price ?? booking.service?.price ?? 0)
+                                            )}
                                         </div>
                                     )}
                                 </div>

@@ -40,7 +40,7 @@ if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
         try {
             let buttonText = 'Записаться';
             if (role === 'admin') buttonText = 'Админ панель';
-            else if (role === 'master') buttonText = 'Мои записи';
+            else if (role === 'master') buttonText = 'Панель мастера';
 
             await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/setChatMenuButton`, {
                 chat_id: chatId,
@@ -61,10 +61,8 @@ if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
         ['📋 Мои записи', '❓ Помощь']
     ]).resize();
 
-    // Reply keyboard for masters
-    const masterKeyboard = Markup.keyboard([
-        ['📋 Мои записи', '❓ Помощь']
-    ]).resize();
+    // Reply keyboard for masters (empty as per request)
+    const masterKeyboard = Markup.keyboard([]).resize();
 
     // Reply keyboard for admins (without WebApp button - using Menu Button instead)
     const adminKeyboard = Markup.keyboard([
@@ -114,8 +112,7 @@ if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
             await ctx.reply(
                 `💇 <b>Добро пожаловать, ${userName}!</b>\n\n` +
                 `Вы вошли как <b>мастер</b>.\n\n` +
-                `📱 Нажмите кнопку <b>меню</b> (слева от поля ввода) для просмотра ваших записей.\n` +
-                `📋 Нажмите "Мои записи" чтобы посмотреть расписание.`,
+                `📱 Нажмите кнопку <b>меню</b> "Панель мастера" (слева от поля ввода) для просмотра ваших записей.`,
                 { parse_mode: 'HTML', ...masterKeyboard }
             );
         } else {
