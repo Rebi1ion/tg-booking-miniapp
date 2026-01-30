@@ -47,6 +47,7 @@ interface AppState {
     masters: Master[];
     masterServices: MasterService[];
     userBookings: Booking[];
+    settings: any | null; // Using any for simplicity as Settings type is in component
 
     activeCategory: string | null;
     activeHall: string | null;
@@ -113,6 +114,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     setMasterInfo: (master: any) => {
         set({ isMaster: !!master, masterInfo: master });
     },
+
+    settings: null,
 
     currentStep: 1,
     selectedBranch: null,
@@ -202,13 +205,15 @@ export const useAppStore = create<AppState>((set, get) => ({
                 ? `${API_URL}/services/personalized/${userId}`
                 : `${API_URL}/services`;
 
-            const [servicesRes, mastersRes] = await Promise.all([
+            const [servicesRes, mastersRes, settingsRes] = await Promise.all([
                 fetch(servicesUrl, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
-                fetch(`${API_URL}/masters`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
+                fetch(`${API_URL}/masters`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
+                fetch(`${API_URL}/settings`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
             ]);
 
             const services = await servicesRes.json();
             const masters = await mastersRes.json();
+            const settings = await settingsRes.json();
 
             // Fallback mock data if DB is empty (for demo check)
             const finalServices = (services && services.length > 0) ? services : [
@@ -223,7 +228,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
             set({
                 services: finalServices,
-                masters: finalMasters
+                masters: finalMasters,
+                settings: settings
             });
         } catch (error) {
             console.error("Failed to load initial data", error);

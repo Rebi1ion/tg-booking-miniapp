@@ -61,8 +61,8 @@ if (!BOT_TOKEN || BOT_TOKEN === 'ВАШ_БОТ_ТОКЕН') {
         ['📋 Мои записи', '❓ Помощь']
     ]).resize();
 
-    // Reply keyboard for masters (empty as per request)
-    const masterKeyboard = Markup.keyboard([]).resize();
+    // Reply keyboard for masters (empty - remove it)
+    const masterKeyboard = Markup.removeKeyboard();
 
     // Reply keyboard for admins (without WebApp button - using Menu Button instead)
     const adminKeyboard = Markup.keyboard([

@@ -13,6 +13,13 @@ cron.schedule('*/5 * * * *', async () => {
         return; // Feature disabled
     }
 
+    // Check if prepayment is required in global settings
+    const settings = await prisma.settings.findUnique({ where: { id: 'main' } });
+    if (!settings?.require_prepayment) {
+        // console.log('[BookingCleanup] Prepayment not required, skipping auto-cancellation');
+        return;
+    }
+
     console.log('[BookingCleanup] Checking for expired unpaid bookings...');
 
     try {

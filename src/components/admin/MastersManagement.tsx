@@ -444,13 +444,13 @@ export const MastersManagement = () => {
             </div>
 
             {/* Add New Master Form (only when explicitly adding) */}
-            {isAdding && <RenderForm />}
+            {isAdding && RenderForm()}
 
             {/* Masters List */}
             {masters.map(master => (
                 <React.Fragment key={master.id}>
                     {/* Render form ABOVE the master card if we are editing this master */}
-                    {editingId === master.id && <RenderForm />}
+                    {editingId === master.id && RenderForm()}
 
                     <Card className={editingId === master.id ? 'opacity-50 border-dashed' : ''}>
                         <CardContent className="p-4">

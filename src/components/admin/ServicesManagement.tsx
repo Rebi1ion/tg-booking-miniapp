@@ -293,7 +293,7 @@ export const ServicesManagement = () => {
             </div>
 
             {/* Add Form - only for NEW services */}
-            {isAdding && <EditForm />}
+            {isAdding && EditForm()}
 
 
 
@@ -342,7 +342,7 @@ export const ServicesManagement = () => {
                                     </CardContent>
                                 </Card>
                                 {/* Inline edit form - appears after selected service */}
-                                {editingId === service.id && <EditForm />}
+                                {editingId === service.id && EditForm()}
                             </React.Fragment>
                         ))}
                     </div>

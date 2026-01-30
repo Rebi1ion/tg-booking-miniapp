@@ -319,7 +319,7 @@ function App() {
                 ) : (
                     <div className="relative pb-24">
                         {/* Birthday Button - shows if user hasn't set birthday */}
-                        {user && !userBirthday && clientTab === 'booking' && !showBirthdayForm && (
+                        {user && !userBirthday && clientTab === 'booking' && !showBirthdayForm && useAppStore.getState().settings?.birthday_enabled !== false && (
                             <div className="p-4 container max-w-md mx-auto">
                                 <button
                                     onClick={() => setShowBirthdayForm(true)}
