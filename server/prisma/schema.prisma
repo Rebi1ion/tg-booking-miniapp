@@ -159,7 +159,7 @@ model PromoUsage {
   user_id      String
   used_at      DateTime  @default(now())
 
-  @@unique([promotion_id, user_id])  // One record per user per promo (count stored differently)
+  // @@unique([promotion_id, user_id])  -- Removed to allow multiple usages per user
 }
 
 model Settings {

@@ -138,6 +138,7 @@ router.post('/', async (req, res) => {
             }
         }
 
+
         // Check pending bookings limit (only for registered users, not admin bookings)
         if (user_id && MAX_PENDING_BOOKINGS > 0) {
             const pendingCount = await prisma.booking.count({
@@ -152,6 +153,36 @@ router.post('/', async (req, res) => {
                     error: `Превышен лимит неоплаченных записей (${MAX_PENDING_BOOKINGS}). Оплатите или отмените существующие записи.`,
                     code: 'PENDING_LIMIT_EXCEEDED'
                 });
+            }
+        }
+
+        // Validate Promotion Limits
+        if (promo_id) {
+            const promotion = await prisma.promotion.findUnique({ where: { id: promo_id } });
+            if (promotion) {
+                // Check if active and dates
+                const now = new Date();
+                if (!promotion.is_active ||
+                    (promotion.start_date && promotion.start_date > now) ||
+                    (promotion.end_date && promotion.end_date < now)) {
+                    return res.status(400).json({ error: 'Промокод неактивен или срок действия истек' });
+                }
+
+                // Check Max Total Uses
+                if (promotion.max_total_uses) {
+                    const totalUses = await prisma.promoUsage.count({ where: { promotion_id: promo_id } });
+                    if (totalUses >= promotion.max_total_uses) {
+                        return res.status(400).json({ error: 'Лимит использования промокода исчерпан' });
+                    }
+                }
+
+                // Check Max Uses Per User
+                if (user_id && promotion.max_uses_per_user > 0) {
+                    const userUses = await prisma.promoUsage.count({ where: { promotion_id: promo_id, user_id } });
+                    if (userUses >= promotion.max_uses_per_user) {
+                        return res.status(400).json({ error: `Вы уже использовали этот промокод максимальное количество раз (${promotion.max_uses_per_user})` });
+                    }
+                }
             }
         }
 
@@ -175,6 +206,22 @@ router.post('/', async (req, res) => {
                 user: true
             }
         });
+
+        // Record Promo Usage
+        if (booking && promo_id && user_id) {
+            try {
+                await prisma.promoUsage.create({
+                    data: {
+                        promotion_id: promo_id,
+                        user_id
+                    }
+                });
+            } catch (err) {
+                console.error("Failed to record promo usage:", err);
+                // Non-blocking error, but worth noting.
+                // If schema unique constraint exists, this will fail on 2nd usage.
+            }
+        }
 
         // Notify admins about new booking (async, don't wait)
         const { notifyAdminsNewBooking } = require('../services/reminderService');

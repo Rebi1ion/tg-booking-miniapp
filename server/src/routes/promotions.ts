@@ -319,26 +319,13 @@ router.post('/use', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Необходимы promotion_id и user_id' });
         }
 
-        // Upsert usage record (increment count would require a different approach)
-        // For simplicity, we create one record per usage
+        // Create a new usage record
+        // unique constraint on [promotion_id, user_id] was removed to allow multiple uses
         const usage = await prisma.promoUsage.create({
             data: {
                 promotion_id,
                 user_id
             }
-        }).catch(async () => {
-            // If unique constraint fails, update the existing record's timestamp
-            return await prisma.promoUsage.update({
-                where: {
-                    promotion_id_user_id: {
-                        promotion_id,
-                        user_id
-                    }
-                },
-                data: {
-                    used_at: new Date()
-                }
-            });
         });
 
         res.json({ success: true, usage });

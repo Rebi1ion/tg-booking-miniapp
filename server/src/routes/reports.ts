@@ -45,6 +45,7 @@ function addBookingsSheet(
         { header: 'Клиент', key: 'client', width: 22 },
         { header: 'TG ID', key: 'tg_id', width: 12 },
         { header: 'Цена', key: 'price', width: 10 },
+        { header: 'Цена со скидкой', key: 'discounted_price', width: 15 },
         { header: 'Статус', key: 'status', width: 15 }
     ];
 
@@ -85,19 +86,25 @@ function addBookingsSheet(
             client: clientName,
             tg_id: booking.user?.telegram_id?.toString() || '-',
             price: booking.service?.price || 0,
+            discounted_price: (booking.custom_price !== null && booking.custom_price !== undefined) ? booking.custom_price : '',
             status: statusLabels[booking.status] || booking.status
         });
+
+        // Determine final price for revenue calculation
+        const finalPrice = (booking.custom_price !== null && booking.custom_price !== undefined)
+            ? booking.custom_price
+            : (booking.service?.price || 0);
 
         // Color code status and count
         const statusCell = row.getCell('status');
         if (booking.status === 'paid') {
             statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90EE90' } };
             stats.paid++;
-            revenue += booking.service?.price || 0;
+            revenue += finalPrice;
         } else if (booking.status === 'completed') {
             statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90EE90' } };
             stats.completed++;
-            revenue += booking.service?.price || 0;
+            revenue += finalPrice;
         } else if (booking.status === 'pending' || booking.status === 'pending_prepayment') {
             statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFE0' } };
             stats.pending++;
@@ -286,7 +293,7 @@ router.get('/bookings', async (req: Request, res: Response) => {
         // Add chart data below summary
         const chartDataStartRow = summarySheet.rowCount + 3;
 
-        summarySheet.getCell(`A${chartDataStartRow}`).value = 'Статистика по статусам';
+        summarySheet.getCell(`A${chartDataStartRow}`).value = 'Общая статистика';
         summarySheet.getCell(`A${chartDataStartRow}`).font = { bold: true, size: 12 };
 
         summarySheet.getCell(`A${chartDataStartRow + 1}`).value = 'Оплачено';
