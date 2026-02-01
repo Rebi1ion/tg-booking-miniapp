@@ -43,7 +43,8 @@ router.get('/', async (req, res) => {
             include: {
                 service: true,
                 master: true,
-                user: true
+                user: true,
+                branch: true
             },
             orderBy: { start_time: 'asc' }
         });
@@ -203,7 +204,8 @@ router.post('/', async (req, res) => {
             include: {
                 service: true,
                 master: true,
-                user: true
+                user: true,
+                branch: true
             }
         });
 

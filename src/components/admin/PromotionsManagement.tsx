@@ -31,6 +31,8 @@ interface Promotion {
     notify_clients?: boolean;
     notification_message?: string;
     created_at: string;
+    branch_id?: string;
+    branch?: { id: string; name: string };
 }
 
 export function PromotionsManagement() {
@@ -58,11 +60,13 @@ export function PromotionsManagement() {
         time_start: '',
         time_end: '',
         notify_clients: false,
-        notification_message: ''
+        notification_message: '',
+        branch_id: 'all' as string // 'all' or specific branch ID
     });
 
     const [services, setServices] = useState<any[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
+    const [branches, setBranches] = useState<any[]>([]);
 
     useEffect(() => {
         fetchPromotions();
@@ -78,6 +82,15 @@ export function PromotionsManagement() {
             setServices(data || []);
             const cats = [...new Set(data.map((s: any) => s.category).filter(Boolean))] as string[];
             setCategories(cats.sort());
+
+            // Fetch branches
+            const branchesRes = await fetch(`${shopConfig.apiUrl}/branches`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            if (branchesRes.ok) {
+                const branchesData = await branchesRes.json();
+                setBranches(branchesData || []);
+            }
         } catch (error) {
             console.error('Failed to fetch services:', error);
         }
@@ -114,7 +127,8 @@ export function PromotionsManagement() {
                 },
                 body: JSON.stringify({
                     ...formData,
-                    promo_code: formData.promo_code.toUpperCase() || null
+                    promo_code: formData.promo_code.toUpperCase() || null,
+                    branch_id: formData.branch_id === 'all' ? null : formData.branch_id
                 })
             });
 
@@ -158,7 +172,8 @@ export function PromotionsManagement() {
             time_start: promotion.time_start || '',
             time_end: promotion.time_end || '',
             notify_clients: promotion.notify_clients || false,
-            notification_message: promotion.notification_message || ''
+            notification_message: promotion.notification_message || '',
+            branch_id: promotion.branch_id || 'all'
         });
         setIsScheduleEnabled(!!(promotion.valid_days || promotion.time_start));
         setIsCreating(true);
@@ -183,7 +198,8 @@ export function PromotionsManagement() {
             time_start: '',
             time_end: '',
             notify_clients: false,
-            notification_message: ''
+            notification_message: '',
+            branch_id: 'all'
         });
         setIsScheduleEnabled(false);
         setEditingPromotion(null);
@@ -248,6 +264,21 @@ export function PromotionsManagement() {
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         placeholder="Описание акции"
                                     />
+                                </div>
+
+                                {/* Филиал */}
+                                <div className="col-span-2">
+                                    <Label>Филиал</Label>
+                                    <select
+                                        className="w-full h-10 px-3 rounded-md border bg-background"
+                                        value={formData.branch_id}
+                                        onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
+                                    >
+                                        <option value="all">Во всех филиалах</option>
+                                        {branches.map(b => (
+                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 <div>
@@ -561,85 +592,93 @@ export function PromotionsManagement() {
                         </form>
                     </CardContent>
                 </Card>
-            )}
+            )
+            }
 
             {/* Promotions List */}
-            {promotions.length === 0 ? (
-                <Card>
-                    <CardContent className="py-8 text-center text-muted-foreground">
-                        Акции не созданы
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="space-y-3">
-                    {promotions.map((promotion) => (
-                        <Card key={promotion.id}>
-                            <CardContent className="p-4">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="font-semibold">{promotion.name}</span>
-                                            <Badge className={promotion.is_active ? 'bg-green-500/20 text-green-600' : 'bg-gray-500/20 text-gray-500'}>
-                                                {promotion.is_active ? 'Активна' : 'Неактивна'}
-                                            </Badge>
-                                        </div>
-
-                                        {promotion.description && (
-                                            <p className="text-sm text-muted-foreground mb-2">{promotion.description}</p>
-                                        )}
-
-                                        <div className="flex flex-wrap gap-2 text-sm">
-                                            <Badge variant="outline" className="flex items-center gap-1">
-                                                <Percent className="w-3 h-3" />
-                                                {formatDiscount(promotion)}
-                                            </Badge>
-
-                                            {promotion.promo_code && (
-                                                <Badge variant="outline" className="flex items-center gap-1">
-                                                    <Tag className="w-3 h-3" />
-                                                    {promotion.promo_code}
+            {
+                promotions.length === 0 ? (
+                    <Card>
+                        <CardContent className="py-8 text-center text-muted-foreground">
+                            Акции не созданы
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="space-y-3">
+                        {promotions.map((promotion) => (
+                            <Card key={promotion.id}>
+                                <CardContent className="p-4">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-semibold">{promotion.name}</span>
+                                                {promotion.branch && (
+                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                        {promotion.branch.name}
+                                                    </Badge>
+                                                )}
+                                                <Badge className={promotion.is_active ? 'bg-green-500/20 text-green-600' : 'bg-gray-500/20 text-gray-500'}>
+                                                    {promotion.is_active ? 'Активна' : 'Неактивна'}
                                                 </Badge>
+                                            </div>
+
+                                            {promotion.description && (
+                                                <p className="text-sm text-muted-foreground mb-2">{promotion.description}</p>
+                                            )}
+
+                                            <div className="flex flex-wrap gap-2 text-sm">
+                                                <Badge variant="outline" className="flex items-center gap-1">
+                                                    <Percent className="w-3 h-3" />
+                                                    {formatDiscount(promotion)}
+                                                </Badge>
+
+                                                {promotion.promo_code && (
+                                                    <Badge variant="outline" className="flex items-center gap-1">
+                                                        <Tag className="w-3 h-3" />
+                                                        {promotion.promo_code}
+                                                    </Badge>
+                                                )}
+                                            </div>
+
+                                            {(promotion.start_date || promotion.end_date) && (
+                                                <p className="text-xs text-muted-foreground mt-2">
+                                                    {promotion.start_date && `С ${format(new Date(promotion.start_date), 'd MMM', { locale: ru })}`}
+                                                    {promotion.start_date && promotion.end_date && ' — '}
+                                                    {promotion.end_date && `до ${format(new Date(promotion.end_date), 'd MMM', { locale: ru })}`}
+                                                </p>
+                                            )}
+
+                                            {promotion.max_uses_per_user > 1 && (
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Макс. {promotion.max_uses_per_user} исп. на клиента
+                                                </p>
                                             )}
                                         </div>
 
-                                        {(promotion.start_date || promotion.end_date) && (
-                                            <p className="text-xs text-muted-foreground mt-2">
-                                                {promotion.start_date && `С ${format(new Date(promotion.start_date), 'd MMM', { locale: ru })}`}
-                                                {promotion.start_date && promotion.end_date && ' — '}
-                                                {promotion.end_date && `до ${format(new Date(promotion.end_date), 'd MMM', { locale: ru })}`}
-                                            </p>
-                                        )}
-
-                                        {promotion.max_uses_per_user > 1 && (
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Макс. {promotion.max_uses_per_user} исп. на клиента
-                                            </p>
-                                        )}
+                                        <div className="flex gap-1">
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => handleEdit(promotion)}
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="text-destructive"
+                                                onClick={() => handleDelete(promotion.id)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     </div>
-
-                                    <div className="flex gap-1">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => handleEdit(promotion)}
-                                        >
-                                            <Pencil className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="text-destructive"
-                                            onClick={() => handleDelete(promotion.id)}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
-        </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                )
+            }
+        </div >
     );
 }

@@ -12,6 +12,11 @@ router.get('/', async (req, res) => {
                     include: {
                         service: true
                     }
+                },
+                branches: {
+                    include: {
+                        branch: true
+                    }
                 }
             },
             orderBy: { name: 'asc' }
@@ -20,7 +25,8 @@ router.get('/', async (req, res) => {
         // Transform to match old structure
         const transformed = masters.map(m => ({
             ...m,
-            services: m.services.map(s => s.service)
+            services: m.services.map(s => s.service),
+            branches: m.branches.map(b => b.branch)
         }));
 
         res.json(transformed);

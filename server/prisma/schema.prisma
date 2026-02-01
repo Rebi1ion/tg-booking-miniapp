@@ -33,6 +33,7 @@ model Branch {
   masters      MasterBranch[]
   services     BranchService[]
   bookings     Booking[]
+  promotions   Promotion[]
 }
 
 model MasterBranch {
@@ -142,6 +143,9 @@ model Promotion {
   valid_days           String?      // Days of week: "1,2,3,4,5" (1=Mon, 7=Sun)
   time_start           String?      // "10:00"
   time_end             String?      // "14:00"
+  
+  branch               Branch?      @relation(fields: [branch_id], references: [id], onDelete: SetNull)
+  branch_id            String?
   
   // Notification
   notify_clients       Boolean      @default(false)

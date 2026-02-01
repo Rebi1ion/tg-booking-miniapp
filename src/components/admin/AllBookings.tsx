@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Trash2, User, Filter, Clock, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { Master, Booking } from '@/types';
+import type { Master, Booking, Branch } from '@/types';
 
 import { shopConfig } from '@/config/shopConfig';
 
@@ -17,27 +17,33 @@ export const AllBookings = () => {
     const [masters, setMasters] = useState<Master[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [selectedMasterId, setSelectedMasterId] = useState<string>('all');
+    const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [mastersRes, bookingsRes] = await Promise.all([
+            const [mastersRes, bookingsRes, branchesRes] = await Promise.all([
                 fetch(`${API_URL}/masters`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
-                fetch(`${API_URL}/bookings`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
+                fetch(`${API_URL}/bookings`, { headers: { 'ngrok-skip-browser-warning': 'true' } }),
+                fetch(`${API_URL}/branches`, { headers: { 'ngrok-skip-browser-warning': 'true' } })
             ]);
 
             // Проверяем успешность ответов
             const mastersData = mastersRes.ok ? await mastersRes.json() : [];
             const bookingsData = bookingsRes.ok ? await bookingsRes.json() : [];
+            const branchesData = branchesRes.ok ? await branchesRes.json() : [];
 
             // Убеждаемся что данные - массивы
             setMasters(Array.isArray(mastersData) ? mastersData : []);
             setBookings(Array.isArray(bookingsData) ? bookingsData : []);
+            setBranches(Array.isArray(branchesData) ? branchesData : []);
         } catch (error) {
             console.error("Failed to fetch admin data:", error);
             setMasters([]);
             setBookings([]);
+            setBranches([]);
         }
         setLoading(false);
     };
@@ -80,11 +86,30 @@ export const AllBookings = () => {
     const filteredBookings = bookings.filter(b => {
         const dateMatch = !selectedDate || isSameDay(new Date(b.start_time), selectedDate);
         const masterMatch = selectedMasterId === 'all' || b.master_id === selectedMasterId;
-        return dateMatch && masterMatch;
+        const branchMatch = selectedBranchId === 'all' || b.branch_id === selectedBranchId;
+        return dateMatch && masterMatch && branchMatch;
     }).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
+    // Filter masters based on selected branch
+    const filteredMasters = masters.filter(m => {
+        if (selectedBranchId === 'all') return true;
+        // Check if master belongs to selected branch (assumes mapping exists, otherwise show all)
+        // If 'branches' property exists on master (we updated API to include it)
+        if ((m as any).branches && Array.isArray((m as any).branches)) {
+            return (m as any).branches.some((b: any) => b.id === selectedBranchId);
+        }
+        return true;
+    });
+
     // Custom modifiers for Calendar to show dots
-    const bookedDays = bookings.map(b => new Date(b.start_time));
+    // Filter bookings for calendar dots based on selected branch and master
+    const calendarBookings = bookings.filter(b => {
+        const masterMatch = selectedMasterId === 'all' || b.master_id === selectedMasterId;
+        const branchMatch = selectedBranchId === 'all' || b.branch_id === selectedBranchId;
+        return masterMatch && branchMatch;
+    });
+
+    const bookedDays = calendarBookings.map(b => new Date(b.start_time));
 
     // Helper to get client display name
     const getClientName = (booking: any) => {
@@ -133,13 +158,31 @@ export const AllBookings = () => {
 
                 <div className="flex items-center gap-2 border-t pt-3">
                     <Filter className="h-4 w-4 text-muted-foreground" />
+
+                    {/* Branch Filter */}
+                    <select
+                        className="bg-transparent text-sm font-medium outline-none flex-1 max-w-[140px]"
+                        value={selectedBranchId}
+                        onChange={(e) => {
+                            setSelectedBranchId(e.target.value);
+                            setSelectedMasterId('all'); // Reset master when branch changes
+                        }}
+                    >
+                        <option value="all">Все филиалы</option>
+                        {branches.map(b => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                    </select>
+
+                    <div className="w-px h-4 bg-border mx-1" />
+
                     <select
                         className="bg-transparent text-sm font-medium outline-none flex-1"
                         value={selectedMasterId}
                         onChange={(e) => setSelectedMasterId(e.target.value)}
                     >
                         <option value="all">Все мастера</option>
-                        {masters.map(m => (
+                        {filteredMasters.map(m => (
                             <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
                     </select>

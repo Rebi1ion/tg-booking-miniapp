@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { Booking } from '@/types';
 import { format, isSameDay, isPast } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2, CalendarX, Trash2, User, Clock, Star } from 'lucide-react';
+import { Loader2, CalendarX, Trash2, User, Clock, Star, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { shopConfig } from '@/config/shopConfig';
 
@@ -10,6 +10,8 @@ const API_URL = shopConfig.apiUrl;
 
 export const TodaySchedule = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
+    const [branches, setBranches] = useState<any[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
     const [loading, setLoading] = useState(true);
 
     const fetchToday = async () => {
@@ -53,12 +55,26 @@ export const TodaySchedule = () => {
         setLoading(false);
     };
 
+    const fetchBranches = async () => {
+        try {
+            const res = await fetch(`${API_URL}/branches`, {
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setBranches(data || []);
+            }
+        } catch (error) {
+            console.error("Failed to fetch branches", error);
+        }
+    };
+
     useEffect(() => {
         fetchToday();
+        fetchBranches();
     }, []);
 
     const updateStatus = async (id: string, status: 'cancelled' | 'completed' | 'paid') => {
-
         try {
             await fetch(`${API_URL}/bookings/${id}`, {
                 method: 'PATCH',
@@ -103,9 +119,39 @@ export const TodaySchedule = () => {
         return booking.status !== 'cancelled' && booking.status !== 'completed';
     };
 
+    const filteredBookings = bookings.filter(b => {
+        if (selectedBranchId === 'all') return true;
+        return b?.branch_id === selectedBranchId;
+    });
+
     if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
 
-    if (bookings.length === 0) {
+    if (filteredBookings.length === 0) {
+        if (bookings.length > 0) {
+            // Bookings exist but filtered out
+            return (
+                <div className="space-y-4">
+                    {/* Filter Header */}
+                    <div className="bg-card rounded-lg p-3 shadow-sm border mb-4 flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-muted-foreground" />
+                        <select
+                            className="bg-transparent text-sm font-medium outline-none flex-1"
+                            value={selectedBranchId}
+                            onChange={(e) => setSelectedBranchId(e.target.value)}
+                        >
+                            <option value="all">Все филиалы</option>
+                            {branches.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
+                        <CalendarX className="h-12 w-12 mb-4 opacity-50" />
+                        <p>В этом филиале сегодня нет записей.</p>
+                    </div>
+                </div>
+            );
+        }
         return (
             <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
                 <CalendarX className="h-12 w-12 mb-4 opacity-50" />
@@ -116,7 +162,22 @@ export const TodaySchedule = () => {
 
     return (
         <div className="space-y-4">
-            {bookings.map((booking: any) => (
+            {/* Filter Header */}
+            <div className="bg-card rounded-lg p-3 shadow-sm border mb-4 flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <select
+                    className="bg-transparent text-sm font-medium outline-none flex-1"
+                    value={selectedBranchId}
+                    onChange={(e) => setSelectedBranchId(e.target.value)}
+                >
+                    <option value="all">Все филиалы</option>
+                    {branches.map(b => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                </select>
+            </div>
+
+            {filteredBookings.map((booking: any) => (
                 <Card
                     key={booking.id}
                     className={`relative overflow-hidden ${booking.status === 'completed' ? 'bg-green-50 border-green-200 text-black' :
@@ -144,6 +205,13 @@ export const TodaySchedule = () => {
                                     <Star className="h-5 w-5 text-yellow-500 mt-[2px] flex-shrink-0" />
                                     <span className="font-medium block break-words leading-tight flex-1">{booking.service?.name || 'Услуга не указана'}</span>
                                 </div>
+
+                                {/* Филиал */}
+                                {booking.branch && (
+                                    <p className="text-sm pl-7 mb-1">
+                                        <span className="opacity-70">Филиал:</span> <span className="font-medium">{booking.branch.name}</span>
+                                    </p>
+                                )}
 
                                 {/* Мастер */}
                                 <p className="text-sm pl-7 mb-2">

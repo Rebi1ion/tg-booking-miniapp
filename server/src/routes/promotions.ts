@@ -114,7 +114,7 @@ router.post('/', async (req, res) => {
         start_date, end_date, is_active, applies_to_type, applies_to,
         max_uses_per_user, max_total_uses,
         is_auto_apply, valid_days, time_start, time_end,
-        notify_clients, notification_message
+        notify_clients, notification_message, branch_id
     } = req.body;
     console.log("POST /api/promotions hit. Body:", JSON.stringify(req.body, null, 2));
     try {
@@ -137,7 +137,8 @@ router.post('/', async (req, res) => {
                 time_start: time_start || null,
                 time_end: time_end || null,
                 notify_clients: notify_clients || false,
-                notification_message: notification_message || null
+                notification_message: notification_message || null,
+                branch_id: branch_id || null
             }
         });
 
@@ -171,7 +172,7 @@ router.put('/:id', async (req, res) => {
         start_date, end_date, is_active, applies_to_type, applies_to,
         max_uses_per_user, max_total_uses,
         is_auto_apply, valid_days, time_start, time_end,
-        notify_clients, notification_message
+        notify_clients, notification_message, branch_id
     } = req.body;
     console.log(`PUT /api/promotions/${id} hit`);
     try {
@@ -195,7 +196,8 @@ router.put('/:id', async (req, res) => {
                 time_start: time_start !== undefined ? time_start : undefined,
                 time_end: time_end !== undefined ? time_end : undefined,
                 notify_clients: notify_clients !== undefined ? notify_clients : undefined,
-                notification_message: notification_message !== undefined ? notification_message : undefined
+                notification_message: notification_message !== undefined ? notification_message : undefined,
+                branch_id: branch_id !== undefined ? branch_id : undefined
             }
         });
 
@@ -235,8 +237,8 @@ router.delete('/:id', async (req, res) => {
 
 // POST /api/promotions/validate - validate promo code
 router.post('/validate', async (req, res) => {
-    const { promo_code, service_id, user_id } = req.body;
-    console.log("POST /api/promotions/validate hit:", { promo_code, service_id, user_id });
+    const { promo_code, service_id, user_id, branch_id } = req.body;
+    console.log("POST /api/promotions/validate hit:", { promo_code, service_id, user_id, branch_id });
     try {
         if (!promo_code) {
             return res.status(400).json({ valid: false, error: 'Промокод не указан' });
@@ -268,6 +270,13 @@ router.post('/validate', async (req, res) => {
             const serviceIds = promotion.applies_to.split(',').map(s => s.trim());
             if (!serviceIds.includes(service_id)) {
                 return res.json({ valid: false, error: 'Промокод не применим к этой услуге' });
+            }
+        }
+
+        // Check Branch
+        if ((promotion as any).branch_id && branch_id) {
+            if ((promotion as any).branch_id !== branch_id) {
+                return res.json({ valid: false, error: 'Промокод не действует в этом филиале' });
             }
         }
 
@@ -337,8 +346,8 @@ router.post('/use', async (req, res) => {
 
 // POST /api/promotions/check-date - check for date-based discounts (no promo code required)
 router.post('/check-date', async (req, res) => {
-    const { booking_date, booking_time, service_id, user_id } = req.body;
-    console.log("POST /api/promotions/check-date hit:", { booking_date, booking_time, service_id, user_id });
+    const { booking_date, booking_time, service_id, user_id, branch_id } = req.body;
+    console.log("POST /api/promotions/check-date hit:", { booking_date, booking_time, service_id, user_id, branch_id });
     try {
         if (!booking_date) {
             return res.json({ found: false });
@@ -399,6 +408,14 @@ router.post('/check-date', async (req, res) => {
                 if (!serviceIds.includes(service_id)) {
                     console.log(`   ❌ Skipped: service not in applies_to`);
                     continue; // Skip, doesn't apply to this service
+                }
+            }
+
+            // Check branch applicability
+            if ((promotion as any).branch_id && branch_id) {
+                if ((promotion as any).branch_id !== branch_id) {
+                    console.log(`   ❌ Skipped: branch mismatch`);
+                    continue;
                 }
             }
 

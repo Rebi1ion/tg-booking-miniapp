@@ -343,7 +343,8 @@ export const initPaymentHandlers = (bot: Telegraf) => {
                     include: {
                         service: true,
                         master: true,
-                        user: true
+                        user: true,
+                        branch: true
                     }
                 });
                 console.log('Prepayment booking confirmed:', booking.id);
@@ -355,7 +356,8 @@ export const initPaymentHandlers = (bot: Telegraf) => {
                     include: {
                         service: true,
                         master: true,
-                        user: true
+                        user: true,
+                        branch: true
                     }
                 });
             }
@@ -383,6 +385,7 @@ export const initPaymentHandlers = (bot: Telegraf) => {
                 `⏰ Время: ${time}\n` +
                 `⭐ Услуга: ${booking.service?.name}\n` +
                 `👤 Мастер: ${booking.master?.name}\n` +
+                (booking.branch ? `🏢 Филиал: ${booking.branch.name}\n` : '') +
                 `💰 Сумма: ${payment.total_amount / 100} ₽\n\n` +
                 `Ждём вас! 🎉`,
                 { parse_mode: 'HTML' }

@@ -54,6 +54,7 @@ export const notifyAdminsNewBooking = async (booking: any) => {
     }
 
     const masterName = booking.master?.name || 'Не указан';
+    const branchName = booking.branch?.name ? `\n🏢 Филиал: ${booking.branch.name}` : '';
     const clientName = booking.client_name || booking.user?.first_name || 'Гость';
     const clientPhone = booking.client_phone && booking.client_phone !== 'N/A' ? booking.client_phone : 'Не указан';
     const clientUsername = booking.user?.username ? `@${booking.user.username}` : '';
@@ -64,9 +65,9 @@ export const notifyAdminsNewBooking = async (booking: any) => {
 📅 <b>Дата:</b> ${dateStr}
 ⏰ <b>Время:</b> ${timeStr}
 
-⭐ <b>Услуга:</b> ${serviceName}
+⭐⭐ <b>Услуга:</b> ${serviceName}
 💰 <b>Цена:</b> ${priceDisplay}
-👤 <b>Мастер:</b> ${masterName}
+👤 <b>Мастер:</b> ${masterName}${branchName}
 
 👨‍💼 <b>Клиент:</b> ${clientName} ${clientUsername}
 📞 <b>Телефон:</b> ${clientPhone}
@@ -81,7 +82,7 @@ ${status}`;
 // Helper function to substitute variables in message templates
 const substituteTemplateVars = (
     template: string,
-    vars: { name?: string; date?: string; time?: string; service?: string; master?: string; price?: string | number }
+    vars: { name?: string; date?: string; time?: string; service?: string; master?: string; price?: string | number; branch?: string }
 ): string => {
     let result = template;
     if (vars.name) result = result.replace(/{name}/g, vars.name);
@@ -90,6 +91,7 @@ const substituteTemplateVars = (
     if (vars.service) result = result.replace(/{service}/g, vars.service);
     if (vars.master) result = result.replace(/{master}/g, vars.master);
     if (vars.price !== undefined) result = result.replace(/{price}/g, vars.price.toString());
+    if (vars.branch) result = result.replace(/{branch}/g, vars.branch);
     return result;
 };
 
@@ -141,7 +143,7 @@ const checkReminders = async () => {
             status: { not: 'cancelled' },
             user: { isNot: null }
         },
-        include: { user: true, service: true, master: true }
+        include: { user: true, service: true, master: true, branch: true }
     });
 
     console.log(`Found ${bookings24h.length} bookings for 24h reminder`);
@@ -157,7 +159,8 @@ const checkReminders = async () => {
                 time: timeStr,
                 service: b.service?.name || 'Услуга',
                 master: b.master?.name || 'Мастер',
-                price: b.service?.price || 0
+                price: b.service?.price || 0,
+                branch: b.branch?.name || ''
             });
 
             const sent = await sendTelegramMessage(Number(b.user.telegram_id), text);
@@ -179,7 +182,7 @@ const checkReminders = async () => {
             status: { not: 'cancelled' },
             user: { isNot: null }
         },
-        include: { user: true, service: true, master: true }
+        include: { user: true, service: true, master: true, branch: true }
     });
 
     console.log(`Found ${bookings2h.length} bookings for 2h reminder`);
@@ -195,7 +198,8 @@ const checkReminders = async () => {
                 time: timeStr,
                 service: b.service?.name || 'Услуга',
                 master: b.master?.name || 'Мастер',
-                price: b.service?.price || 0
+                price: b.service?.price || 0,
+                branch: b.branch?.name || ''
             });
 
             const sent = await sendTelegramMessage(Number(b.user.telegram_id), text);
