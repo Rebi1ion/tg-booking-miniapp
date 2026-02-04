@@ -24,6 +24,19 @@ export const MyBookings = () => {
         load();
     }, [user]);
 
+    const showMessage = (message: string) => {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.showPopup) {
+            tg.showPopup({
+                title: 'Уведомление',
+                message: message,
+                buttons: [{ type: 'ok' }]
+            });
+        } else {
+            alert(message);
+        }
+    };
+
     const handlePayClick = async (bookingId: string) => {
         setSendingInvoice(bookingId);
         try {
@@ -32,13 +45,13 @@ export const MyBookings = () => {
                 headers: { 'ngrok-skip-browser-warning': 'true' }
             });
             if (res.ok) {
-                alert('✅ Новый счёт отправлен в чат бота! Используйте его для оплаты.');
+                showMessage('✅ Новый счёт отправлен в чат бота! Используйте его для оплаты.');
             } else {
                 const data = await res.json();
-                alert(data.error || 'Ошибка при отправке счёта');
+                showMessage(data.error || 'Ошибка при отправке счёта');
             }
         } catch (error) {
-            alert('Ошибка при отправке счёта');
+            showMessage('Ошибка при отправке счёта');
         }
         setSendingInvoice(null);
     };
